@@ -29,6 +29,23 @@ class Constants
     static final int[] crc_table = new int[256];
 
     /**
+     * Maximal alphabet size.
+     * <p>
+     * Alphabet consists of exactly two RUN symbols, from 0 to 255 MTF values and one EOB symbol. This makes possible
+     * alphabet sizes in range from 3 to 258.
+     */
+    static final int MAX_ALPHA_SIZE = 2 + 255 + 1;
+
+    /**
+     * Maximal length of prefix code.
+     * <p>
+     * As of version 1.0.6 <em>bzip2</em> can generate prefix codes of length up to 17 bits, but it can decode prefix
+     * codes up to 20 bits long. To achieve maximal compression ratio <em>lbzip2</em> can generate codes up to 20 bits
+     * long.
+     */
+    static final int MAX_CODE_LENGTH = 20;
+
+    /**
      * Initialize CRC table.
      */
     static
