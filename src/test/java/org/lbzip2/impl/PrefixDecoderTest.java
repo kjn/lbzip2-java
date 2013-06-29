@@ -29,12 +29,12 @@ public class PrefixDecoderTest
 {
     public void testIncompleteCode()
     {
-        int[] counts = new int[] { 7, 5, 4, 1 };
+        int[] lengths = new int[] { 7, 5, 4, 1 };
 
         try
         {
             PrefixDecoder decoder = new PrefixDecoder();
-            decoder.make_tree( counts, counts.length );
+            decoder.make_tree( lengths, lengths.length );
             fail();
         }
         catch ( StreamFormatException e )
@@ -45,12 +45,12 @@ public class PrefixDecoderTest
 
     public void testOversubscribedCode()
     {
-        int[] counts = new int[] { 3, 1, 3, 1, 3 };
+        int[] lengths = new int[] { 3, 1, 3, 1, 3 };
 
         try
         {
             PrefixDecoder decoder = new PrefixDecoder();
-            decoder.make_tree( counts, counts.length );
+            decoder.make_tree( lengths, lengths.length );
             fail();
         }
         catch ( StreamFormatException e )

@@ -114,26 +114,23 @@ class PrefixDecoder
     static final int EOB = 0;
 
     /**
-     * Given a list of code lengths, make a set of tables to decode that set of codes. Return value is passed in mtf
-     * array of the decoder state. On success value from zero to five is passed (the tables are built only in this
-     * case), but also error codes ERR_INCOMPLT or ERR_PREFIX may be returned, which means that given code set is
-     * incomplete or (respectively) the code is invalid (an oversubscribed set of lengths).
+     * Given a list of code lengths, make a set of tables to decode that set of codes.
      * <p>
      * Because the alphabet size is always less or equal to 258 (2 RUN symbols, at most 255 MFV values and 1 EOB symbol)
      * the average code length is strictly less than 9. Hence the probability of decoding code longer than 10 bits is
      * quite small (usually < 0.2).
      * <p>
-     * lbzip2 utilises this fact by implementing a hybrid algorithm for prefix decoding. For codes of length <= 10
+     * lbzip2 utilizes this fact by implementing a hybrid algorithm for prefix decoding. For codes of length <= 10
      * lbzip2 maintains a LUT (look-up table) that maps codes directly to corresponding symbol values. Codes longer than
      * 10 bits are not mapped by the LUT are decoded using cannonical prefix decoding algorithm.
      * <p>
      * The above value of 10 bits was determined using a series of benchmarks. It's not hardcoded but instead it is
-     * defined as a constant HUFF_START_WIDTH (see the comment above). If on some system a different value works better,
-     * it can be adjusted freely.
+     * defined as a constant {@code HUFF_START_WIDTH}. If on some system a different value works better, it can be
+     * adjusted freely.
      * 
      * @param L code lengths
      * @param n alphabet size
-     * @throws StreamFormatException
+     * @throws StreamFormatException if given code set is incomplete or invalid
      */
     void make_tree( int[] L, int n )
         throws StreamFormatException
@@ -177,8 +174,8 @@ class PrefixDecoder
         {
             // FIXME: this needs to be a different kind of exception
             throw new StreamFormatException(
-                                           Long.MIN_VALUE + sofar < Long.MIN_VALUE + ( 1 << MAX_CODE_LENGTH ) ? "Incomplete prefix code"
-                                                           : "Oversubscribed prefix code" );
+                                             Long.MIN_VALUE + sofar < Long.MIN_VALUE + ( 1 << MAX_CODE_LENGTH ) ? "Incomplete prefix code"
+                                                             : "Oversubscribed prefix code" );
         }
 
         /* Create left-justified base table. */
