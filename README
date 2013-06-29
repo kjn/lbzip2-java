@@ -1,0 +1,4 @@
+lbzip2-java is going to be a high-performance Java implementation of
+lbzip2 compression and decompression algorithms.
+
+The author of lbzip2-java is Mikolaj Izdebski.
