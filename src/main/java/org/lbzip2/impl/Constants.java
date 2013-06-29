@@ -46,6 +46,13 @@ class Constants
     static final int MAX_CODE_LENGTH = 20;
 
     /**
+     * Minimal length of prefix code.
+     * <p>
+     * In <em>bz2</em> file format zero-length codes are not allowed, thus minimal code length is one.
+     */
+    static final int MIN_CODE_LENGTH = 1;
+
+    /**
      * Initialize CRC table.
      */
     static

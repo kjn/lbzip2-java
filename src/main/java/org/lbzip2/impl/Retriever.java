@@ -16,7 +16,7 @@
 package org.lbzip2.impl;
 
 /**
- * Retriever parses and decodes <em>bz2</em> streams into internal <em>lbzip2</em> structures.
+ * Retriever parses and decodes <em>bz2</em> streams into internal structures.
  * 
  * @author Mikolaj Izdebski
  */
@@ -62,4 +62,5 @@ class Retriever
          */
         S_PREFIX,
     };
+
 }

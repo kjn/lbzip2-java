@@ -17,6 +17,9 @@ package org.lbzip2.impl;
 
 import static org.lbzip2.impl.Constants.MAX_ALPHA_SIZE;
 import static org.lbzip2.impl.Constants.MAX_CODE_LENGTH;
+import static org.lbzip2.impl.Constants.MIN_CODE_LENGTH;
+
+import org.lbzip2.StreamFormatException;
 
 /**
  * Decodes canonical prefix code.
@@ -56,7 +59,7 @@ class PrefixDecoder
      * HUFF_START_WIDTH} was determined with a series of benchmarks. The optimum value may differ though from machine to
      * machine, and possibly even between compilers. Your mileage may vary.
      */
-    private static final int HUFF_START_WIDTH = 10;
+    static final int HUFF_START_WIDTH = 10;
 
     /**
      * Decoding start point.
@@ -99,5 +102,162 @@ class PrefixDecoder
         this.base = new long[MAX_CODE_LENGTH + 2];
         this.count = new int[MAX_CODE_LENGTH + 1];
         this.perm = new short[MAX_ALPHA_SIZE];
+    }
+
+    /*
+     * Internal symbol values differ from that used in bzip2! 257 - RUN-A 258 - RUN-B 1-255 - MTFV 0 - EOB
+     */
+    static final int RUN_A = 256 + 1;
+
+    static final int RUN_B = 256 + 2;
+
+    static final int EOB = 0;
+
+    /**
+     * Given a list of code lengths, make a set of tables to decode that set of codes. Return value is passed in mtf
+     * array of the decoder state. On success value from zero to five is passed (the tables are built only in this
+     * case), but also error codes ERR_INCOMPLT or ERR_PREFIX may be returned, which means that given code set is
+     * incomplete or (respectively) the code is invalid (an oversubscribed set of lengths).
+     * <p>
+     * Because the alphabet size is always less or equal to 258 (2 RUN symbols, at most 255 MFV values and 1 EOB symbol)
+     * the average code length is strictly less than 9. Hence the probability of decoding code longer than 10 bits is
+     * quite small (usually < 0.2).
+     * <p>
+     * lbzip2 utilises this fact by implementing a hybrid algorithm for prefix decoding. For codes of length <= 10
+     * lbzip2 maintains a LUT (look-up table) that maps codes directly to corresponding symbol values. Codes longer than
+     * 10 bits are not mapped by the LUT are decoded using cannonical prefix decoding algorithm.
+     * <p>
+     * The above value of 10 bits was determined using a series of benchmarks. It's not hardcoded but instead it is
+     * defined as a constant HUFF_START_WIDTH (see the comment above). If on some system a different value works better,
+     * it can be adjusted freely.
+     * 
+     * @param L code lengths
+     * @param n alphabet size
+     * @throws StreamFormatException
+     */
+    void make_tree( int[] L, int n )
+        throws StreamFormatException
+    {
+        int[] C; /* code length count; C[0] is a sentinel */
+        long[] B; /* left-justified base */
+        short[] P; /* symbols sorted by code length */
+        short[] S; /* lookup table */
+
+        int k; /* current code length */
+        int s; /* current symbol */
+        int cum;
+        int code;
+        long sofar;
+        long next;
+        long inc;
+        int v;
+
+        /* Initialize constants. */
+        C = this.count;
+        B = this.base;
+        P = this.perm;
+        S = this.start;
+
+        /* Count symbol lengths. */
+        for ( k = 0; k <= MAX_CODE_LENGTH; k++ )
+            C[k] = 0;
+        for ( s = 0; s < n; s++ )
+        {
+            k = L[s];
+            C[k]++;
+        }
+        /* Make sure there are no zero-length codes. */
+        assert ( C[0] == 0 );
+
+        /* Check if Kraft's inequality is satisfied. */
+        sofar = 0;
+        for ( k = MIN_CODE_LENGTH; k <= MAX_CODE_LENGTH; k++ )
+            sofar += (long) C[k] << ( MAX_CODE_LENGTH - k );
+        if ( sofar != ( 1 << MAX_CODE_LENGTH ) )
+        {
+            // FIXME: this needs to be a different kind of exception
+            throw new StreamFormatException(
+                                           Long.MIN_VALUE + sofar < Long.MIN_VALUE + ( 1 << MAX_CODE_LENGTH ) ? "Incomplete prefix code"
+                                                           : "Oversubscribed prefix code" );
+        }
+
+        /* Create left-justified base table. */
+        sofar = 0;
+        for ( k = MIN_CODE_LENGTH; k <= MAX_CODE_LENGTH; k++ )
+        {
+            next = sofar + ( (long) C[k] << ( 64 - k ) );
+            assert ( next == 0 || Long.MIN_VALUE + next >= Long.MIN_VALUE + sofar );
+            B[k] = sofar;
+            sofar = next;
+        }
+        /* Ensure that "sofar" has overflowed to zero. */
+        assert ( sofar == 0 );
+
+        /*
+         * The last few entries of lj-base may have overflowed to zero, so replace all trailing zeros with the greatest
+         * possible 64-bit value (which is greater than the greatest possible left-justified base).
+         */
+        assert ( k == MAX_CODE_LENGTH + 1 );
+        k = MAX_CODE_LENGTH;
+        while ( C[k] == 0 )
+        {
+            assert ( k > MIN_CODE_LENGTH );
+            assert ( B[k] == 0 );
+            B[k--] = -1;
+        }
+
+        /* Transform counts into indices (cumulative counts). */
+        cum = 0;
+        for ( k = MIN_CODE_LENGTH; k <= MAX_CODE_LENGTH; k++ )
+        {
+            int t1 = C[k];
+            C[k] = cum;
+            cum += t1;
+        }
+        assert ( cum == n );
+
+        /* Perform counting sort. */
+        P[C[L[0]]++] = RUN_A;
+        P[C[L[1]]++] = RUN_B;
+        for ( s = 2; s < n - 1; s++ )
+            P[C[L[s]]++] = (short) ( s - 1 );
+        P[C[L[n - 1]]++] = EOB;
+
+        /* Create first, complete start entries. */
+        code = 0;
+        inc = 1 << ( HUFF_START_WIDTH - 1 );
+        for ( k = 1; k <= HUFF_START_WIDTH; k++ )
+        {
+            for ( s = C[k - 1]; s < C[k]; s++ )
+            {
+                short x = (short) ( ( P[s] << 5 ) | k );
+                v = code;
+                code += inc;
+                while ( v < code )
+                    S[v++] = x;
+            }
+            inc >>= 1;
+        }
+
+        /* Fill remaining, incomplete start entries. */
+        assert ( k == HUFF_START_WIDTH + 1 );
+        sofar = (long) code << ( 64 - HUFF_START_WIDTH );
+        while ( code < ( 1 << HUFF_START_WIDTH ) )
+        {
+            while ( Long.MIN_VALUE + sofar >= Long.MIN_VALUE + B[k + 1] )
+                k++;
+            S[code] = (short) k;
+            code++;
+            sofar += 1L << ( 64 - HUFF_START_WIDTH );
+        }
+        assert ( sofar == 0 );
+
+        /*
+         * Restore cumulative counts as they were destroyed by the sorting phase. The sentinel wasn't touched, so there
+         * is no need to restore it.
+         */
+        for ( k = MAX_CODE_LENGTH; k > 0; k-- )
+            C[k] = C[k - 1];
+        assert ( C[0] == 0 );
     }
 }
