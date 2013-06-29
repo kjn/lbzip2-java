@@ -7,4 +7,28 @@
   <groupId>org.lbzip2</groupId>
   <artifactId>lbzip2</artifactId>
   <version>0.0.0-SNAPSHOT</version>
+
+  <properties>
+    <compilerPluginVersion>3.0</compilerPluginVersion>
+  </properties>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>${compilerPluginVersion}</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+    <plugins>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>1.7</source>
+          <target>1.7</target>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 </project>
