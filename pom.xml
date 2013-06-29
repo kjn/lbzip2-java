@@ -10,8 +10,26 @@
 
   <properties>
     <project.build.sourceEncoding>US-ASCII</project.build.sourceEncoding>
+    <junitVersion>4.11</junitVersion>
     <compilerPluginVersion>3.0</compilerPluginVersion>
   </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <version>${junitVersion}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+  <dependencies>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
 
   <build>
     <pluginManagement>
