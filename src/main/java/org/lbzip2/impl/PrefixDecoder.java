@@ -172,7 +172,6 @@ class PrefixDecoder
             sofar += (long) C[k] << ( MAX_CODE_LENGTH - k );
         if ( sofar != ( 1 << MAX_CODE_LENGTH ) )
         {
-            // FIXME: this needs to be a different kind of exception
             throw new StreamFormatException(
                                              Long.MIN_VALUE + sofar < Long.MIN_VALUE + ( 1 << MAX_CODE_LENGTH ) ? "Incomplete prefix code"
                                                              : "Oversubscribed prefix code" );
