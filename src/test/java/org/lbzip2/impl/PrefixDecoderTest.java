@@ -15,6 +15,11 @@
  */
 package org.lbzip2.impl;
 
+import static org.lbzip2.impl.Constants.MAX_ALPHA_SIZE;
+import static org.lbzip2.impl.Constants.MAX_CODE_LENGTH;
+
+import java.util.Random;
+
 import junit.framework.TestCase;
 
 import org.lbzip2.StreamFormatException;
@@ -27,6 +32,18 @@ import org.lbzip2.StreamFormatException;
 public class PrefixDecoderTest
     extends TestCase
 {
+    /**
+     * Seed for PRNG.
+     */
+    private static final long SEED = 7541;
+
+    /**
+     * Number of test repetitions (Monte-Carlo iterations).
+     */
+    private static final int N_ITER = 1000;
+
+    private final Random random = new Random( SEED );
+
     public void testIncompleteCode()
     {
         int[] lengths = new int[] { 7, 5, 4, 1 };
@@ -56,6 +73,43 @@ public class PrefixDecoderTest
         catch ( StreamFormatException e )
         {
             assertTrue( e.getMessage().toLowerCase().contains( "oversubscribed" ) );
+        }
+    }
+
+    /**
+     * Test if prefix decoder correctly handles random code length sequence.
+     */
+    public void testRandomLengths()
+    {
+        for ( int iter = 0; iter < N_ITER; iter++ )
+        {
+            int as = random.nextInt( MAX_ALPHA_SIZE - 1 ) + 2;
+            int[] len = new int[as];
+
+            for ( int v = 0; v < as; v++ )
+                len[v] = random.nextInt( MAX_CODE_LENGTH ) + 1;
+
+            double kraftSum = 0;
+            for ( int v = 0; v < as; v++ )
+            {
+                double width = 1;
+                for ( int k = 0; k < len[v]; k++ )
+                    width *= 0.5;
+                kraftSum += width;
+            }
+
+            boolean expectException = kraftSum != 1;
+
+            try
+            {
+                PrefixDecoder decoder = new PrefixDecoder();
+                decoder.make_tree( len, len.length );
+                assertFalse( expectException );
+            }
+            catch ( StreamFormatException e )
+            {
+                assertTrue( expectException );
+            }
         }
     }
 }
