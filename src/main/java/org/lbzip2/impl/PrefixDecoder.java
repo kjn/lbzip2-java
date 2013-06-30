@@ -18,6 +18,8 @@ package org.lbzip2.impl;
 import static org.lbzip2.impl.Constants.MAX_ALPHA_SIZE;
 import static org.lbzip2.impl.Constants.MAX_CODE_LENGTH;
 import static org.lbzip2.impl.Constants.MIN_CODE_LENGTH;
+import static org.lbzip2.impl.Unsigned.uge;
+import static org.lbzip2.impl.Unsigned.ult;
 
 import org.lbzip2.StreamFormatException;
 
@@ -172,9 +174,10 @@ class PrefixDecoder
             sofar += (long) C[k] << ( MAX_CODE_LENGTH - k );
         if ( sofar != ( 1 << MAX_CODE_LENGTH ) )
         {
-            throw new StreamFormatException(
-                                             Long.MIN_VALUE + sofar < Long.MIN_VALUE + ( 1 << MAX_CODE_LENGTH ) ? "Incomplete prefix code"
-                                                             : "Oversubscribed prefix code" );
+            if ( ult( sofar, 1 << MAX_CODE_LENGTH ) )
+                throw new StreamFormatException( "Incomplete prefix code" );
+            else
+                throw new StreamFormatException( "Oversubscribed prefix code" );
         }
 
         /* Create left-justified base table. */
@@ -182,7 +185,7 @@ class PrefixDecoder
         for ( k = MIN_CODE_LENGTH; k <= MAX_CODE_LENGTH; k++ )
         {
             next = sofar + ( (long) C[k] << ( 64 - k ) );
-            assert ( next == 0 || Long.MIN_VALUE + next >= Long.MIN_VALUE + sofar );
+            assert ( next == 0 || uge( next, sofar ) );
             B[k] = sofar;
             sofar = next;
         }
@@ -240,7 +243,7 @@ class PrefixDecoder
         sofar = (long) code << ( 64 - HUFF_START_WIDTH );
         while ( code < ( 1 << HUFF_START_WIDTH ) )
         {
-            while ( Long.MIN_VALUE + sofar >= Long.MIN_VALUE + B[k + 1] )
+            while ( uge( sofar, B[k + 1] ) )
                 k++;
             S[code] = (short) k;
             code++;
