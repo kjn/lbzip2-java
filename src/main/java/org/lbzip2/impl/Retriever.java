@@ -15,6 +15,10 @@
  */
 package org.lbzip2.impl;
 
+import static org.lbzip2.impl.Constants.MAX_ALPHA_SIZE;
+import static org.lbzip2.impl.Constants.MAX_SELECTORS;
+import static org.lbzip2.impl.Constants.MAX_TREES;
+
 /**
  * Retriever parses and decodes <em>bz2</em> streams into internal structures.
  * 
@@ -63,4 +67,82 @@ class Retriever
         S_PREFIX,
     };
 
+    /**
+     * Current state of retriever FSA.
+     */
+    State state;
+
+    /**
+     * Coding tree selectors.
+     */
+    byte[] selector;
+
+    /**
+     * Number of prefix trees used.
+     */
+    int num_trees;
+
+    /**
+     * Number of tree selectors present.
+     */
+    int num_selectors;
+
+    /**
+     * Number of distinct prefix codes.
+     */
+    int alpha_size;
+
+    byte[] code_len;
+
+    /**
+     * Current state of inverse MTF FSA.
+     */
+    int[] mtf;
+
+    /**
+     * Coding trees.
+     */
+    PrefixDecoder[] tree;
+
+    /**
+     * Big descriptor of the bitmap.
+     */
+    short big;
+
+    /**
+     * small descriptor of the bitmap.
+     */
+    short small;
+
+    /**
+     * General purpose index.
+     */
+    int j;
+
+    /**
+     * Current tree number.
+     */
+    int t;
+
+    /**
+     * Current group number.
+     */
+    int g;
+
+    MtfDecoder mtf_d;
+
+    int runChar;
+
+    int run;
+
+    int shift;
+
+    public Retriever()
+    {
+        this.selector = new byte[MAX_SELECTORS];
+        this.code_len = new byte[MAX_ALPHA_SIZE];
+        this.mtf = new int[MAX_TREES];
+        this.tree = new PrefixDecoder[MAX_TREES];
+        this.mtf_d = new MtfDecoder();
+    }
 }
