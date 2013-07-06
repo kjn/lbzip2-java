@@ -11,7 +11,15 @@
   <properties>
     <project.build.sourceEncoding>US-ASCII</project.build.sourceEncoding>
     <junitVersion>4.11</junitVersion>
-    <compilerPluginVersion>3.0</compilerPluginVersion>
+
+    <cleanPluginVersion>2.5</cleanPluginVersion>
+    <compilerPluginVersion>3.1</compilerPluginVersion>
+    <deployPluginVersion>2.7</deployPluginVersion>
+    <installPluginVersion>2.4</installPluginVersion>
+    <jarPluginVersion>2.4</jarPluginVersion>
+    <resourcesPluginVersion>2.6</resourcesPluginVersion>
+    <sitePluginVersion>3.3</sitePluginVersion>
+    <surefirePluginVersion>2.15</surefirePluginVersion>
   </properties>
 
   <dependencyManagement>
@@ -35,8 +43,36 @@
     <pluginManagement>
       <plugins>
         <plugin>
+          <artifactId>maven-clean-plugin</artifactId>
+          <version>${cleanPluginVersion}</version>
+        </plugin>
+        <plugin>
           <artifactId>maven-compiler-plugin</artifactId>
           <version>${compilerPluginVersion}</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-deploy-plugin</artifactId>
+          <version>${deployPluginVersion}</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-install-plugin</artifactId>
+          <version>${installPluginVersion}</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>${jarPluginVersion}</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-resources-plugin</artifactId>
+          <version>${resourcesPluginVersion}</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-site-plugin</artifactId>
+          <version>${sitePluginVersion}</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>${surefirePluginVersion}</version>
         </plugin>
       </plugins>
     </pluginManagement>
