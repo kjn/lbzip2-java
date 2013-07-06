@@ -26,7 +26,7 @@ package org.lbzip2.impl;
  * self-balancing binary search trees, but these algorithms have quite big constant factor which makes them impractical
  * for MTF of 256 items.
  * 
- * @author MikolajIzdebski
+ * @author Mikolaj Izdebski
  */
 class MtfDecoder
 {
