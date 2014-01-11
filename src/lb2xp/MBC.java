@@ -296,7 +296,7 @@ public class MBC
                 if ( bs + r > mbs )
                     bad();
                 while ( r-- != 0 )
-                    tt[bs++] = mtf[0];
+                    tt[bs++] = mtf[0] & 0xFF;
                 if ( s + 1 == as )
                     break;
                 t = mtf[--s];
@@ -366,9 +366,9 @@ public class MBC
                     int j;
                     if ( ++i == bs )
                         bad();
-                    for ( j = 0; j < blk[i]; j++ )
+                    for ( j = 0; j < ( blk[i] & 0xFF ); j++ )
                     {
-                        crc = ( ( crc << 8 ) & 0xFFFFFFFF ) ^ crctab[( crc >> 24 ) ^ c];
+                        crc = ( ( crc << 8 ) & 0xFFFFFFFF ) ^ crctab[( crc >>> 24 ) ^ c];
                         write( c );
                     }
                     r = 0;
@@ -404,7 +404,7 @@ public class MBC
                 emit();
                 if ( ( crc ^ 0xFFFFFFFF ) != t )
                     bad();
-                c = ( ( c << 1 ) & 0xFFFFFFFF ) ^ ( c >> 31 ) ^ t;
+                c = ( ( c << 1 ) & 0xFFFFFFFF ) ^ ( c >>> 31 ) ^ t;
             }
             if ( t != 0x1772 )
                 bad();
