@@ -1,5 +1,7 @@
 package org.lbzip2.impl;
 
+import static org.lbzip2.impl.Constants.crc_table;
+
 import java.io.IOException;
 
 import org.lbzip2.StreamFormatException;
@@ -35,8 +37,6 @@ public class MBC
     private int bb; /* the bit-buffer (static, right-aligned) */
 
     private int bk; /* number of bits remaining in the `bb' bit-buffer */
-
-    private final int[] crctab = new int[256]; /* table for fast CRC32 computation */
 
     private final int[] tt = new int[900000]; /* IBWT linked cyclic list */
 
@@ -124,18 +124,6 @@ public class MBC
             x = 2 * x + ( ( bb >> ( bk &= 7 ) ) & 1 );
         }
         return x;
-    }
-
-    /* Initialize crctab[]. */
-    private void init_crc()
-    {
-        int i, k;
-        for ( i = 0; i < 256; i++ )
-        {
-            crctab[i] = i << 24;
-            for ( k = 0; k < 8; k++ )
-                crctab[i] = ( ( crctab[i] << 1 ) & 0xFFFFFFFF ) ^ ( 0x04C11DB7 & -( crctab[i] >>> 31 ) );
-        }
     }
 
     /*
@@ -365,7 +353,7 @@ public class MBC
         {
             d = c;
             c = blk[i] & 0xFF;
-            crc = ( ( crc << 8 ) & 0xFFFFFFFF ) ^ crctab[( crc >>> 24 ) ^ c];
+            crc = ( ( crc << 8 ) & 0xFFFFFFFF ) ^ crc_table[( crc >>> 24 ) ^ c];
             write( c );
             if ( c != d )
                 r = 1;
@@ -379,7 +367,7 @@ public class MBC
                         bad();
                     for ( j = 0; j < ( blk[i] & 0xFF ); j++ )
                     {
-                        crc = ( ( crc << 8 ) & 0xFFFFFFFF ) ^ crctab[( crc >>> 24 ) ^ c];
+                        crc = ( ( crc << 8 ) & 0xFFFFFFFF ) ^ crc_table[( crc >>> 24 ) ^ c];
                         write( c );
                     }
                     r = 0;
@@ -393,7 +381,6 @@ public class MBC
         throws StreamFormatException, IOException
     {
         int t = 0, c;
-        init_crc();
         if ( get( 24 ) != 0x425A68 )
             bad();
         t = get( 8 ) - 0x31;
