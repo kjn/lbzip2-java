@@ -4,13 +4,13 @@ import java.io.IOException;
 
 public class MBC
 {
-    static void err( String msg )
+    private static void err( String msg )
     {
         throw new RuntimeException( msg );
     }
 
     /* Read a single byte from stdin. */
-    static int read()
+    private static int read()
     {
         try
         {
@@ -23,72 +23,72 @@ public class MBC
     }
 
     /* Write a single byte to stdout. */
-    static void write( int c )
+    private static void write( int c )
     {
         System.out.write( c );
     }
 
     /* Print an error message and terminate. */
-    static void bad()
+    private static void bad()
     {
         err( "Data error" );
     }
 
-    int bb; /* the bit-buffer (static, right-aligned) */
+    private int bb; /* the bit-buffer (static, right-aligned) */
 
-    int bk; /* number of bits remaining in the `bb' bit-buffer */
+    private int bk; /* number of bits remaining in the `bb' bit-buffer */
 
-    int[] crctab = new int[256]; /* table for fast CRC32 computation */
+    private final int[] crctab = new int[256]; /* table for fast CRC32 computation */
 
-    int[] tt = new int[900000]; /* IBWT linked cyclic list */
+    private final int[] tt = new int[900000]; /* IBWT linked cyclic list */
 
-    int crc; /* CRC32 computed so far */
+    private int crc; /* CRC32 computed so far */
 
-    int mbs; /* maximal block size (100k-900k in 100k steps) */
+    private int mbs; /* maximal block size (100k-900k in 100k steps) */
 
-    boolean rnd; /* is current block randomized? (0 or 1) */
+    private boolean rnd; /* is current block randomized? (0 or 1) */
 
-    int bs; /* current block size (1-900000) */
+    private int bs; /* current block size (1-900000) */
 
-    int idx; /* BWT primary index (0-899999) */
+    private int idx; /* BWT primary index (0-899999) */
 
-    int as; /*
-             * alphabet size (number of distinct prefix codes, 3-258)
-             */
+    private int as; /*
+                     * alphabet size (number of distinct prefix codes, 3-258)
+                     */
 
-    int nt; /*
-             * number of prefix trees used for current block (2-6)
-             */
+    private int nt; /*
+                     * number of prefix trees used for current block (2-6)
+                     */
 
-    int ns; /* number of selectors (1-32767) */
+    private int ns; /* number of selectors (1-32767) */
 
-    int nm; /* number of MTF values */
+    private int nm; /* number of MTF values */
 
-    byte[] blk = new byte[900000]; /* reconstructed block */
+    private final byte[] blk = new byte[900000]; /* reconstructed block */
 
-    byte[][] len = new byte[6][259]; /*
-                                      * code lengths for different trees (element 258 is a sentinel)
-                                      */
+    private final byte[][] len = new byte[6][259]; /*
+                                                    * code lengths for different trees (element 258 is a sentinel)
+                                                    */
 
-    byte[] sel = new byte[32767]; /* selector MTF values */
+    private final byte[] sel = new byte[32767]; /* selector MTF values */
 
-    byte[] mtf = new byte[256]; /* IMTF register */
+    private final byte[] mtf = new byte[256]; /* IMTF register */
 
-    int[] count = new int[21]; /*
-                                * number of codes of given length (element 0 is a sentinel)
-                                */
+    private final int[] count = new int[21]; /*
+                                              * number of codes of given length (element 0 is a sentinel)
+                                              */
 
-    short[] sorted = new short[258]; /* symbols sorted by ascend. code length */
+    private final short[] sorted = new short[258]; /* symbols sorted by ascend. code length */
 
-    short[] mv = new short[900050]; /*
-                                     * MTF values (elements 900000-900049 are sentinels)
-                                     */
+    private final short[] mv = new short[900050]; /*
+                                                   * MTF values (elements 900000-900049 are sentinels)
+                                                   */
 
     /*
      * A table used for derandomizing randomized blocks. It's a sequence of pseudo-random numbers, hardcoded in bzip2
      * file format.
      */
-    static short[] tab =
+    private static short[] tab =
         new short[] { 619, 720, 127, 481, 931, 816, 813, 233, 566, 247, 985, 724, 205, 454, 863, 491, 741, 242, 949,
             214, 733, 859, 335, 708, 621, 574, 73, 654, 730, 472, 419, 436, 278, 496, 867, 210, 399, 680, 480, 51, 878,
             465, 811, 169, 869, 675, 611, 697, 867, 561, 862, 687, 507, 283, 482, 129, 807, 591, 733, 623, 150, 238,
@@ -115,7 +115,7 @@ public class MBC
             176, 193, 713, 857, 265, 203, 50, 668, 108, 645, 990, 626, 197, 510, 357, 358, 850, 858, 364, 936, 638, };
 
     /* Read and return `n' bits from the input stream. `n' must be <= 32. */
-    int get( int n )
+    private int get( int n )
     {
         int x = 0;
         while ( n-- != 0 )
@@ -128,7 +128,7 @@ public class MBC
     }
 
     /* Initialize crctab[]. */
-    void init_crc()
+    private void init_crc()
     {
         int i, k;
         for ( i = 0; i < 256; i++ )
@@ -142,7 +142,7 @@ public class MBC
     /*
      * Create decode tables using code lengths from `lens[t]'. `t' is the tree selector, must be in range [0,nt).
      */
-    void make_tree( int t )
+    private void make_tree( int t )
     {
         int[] u = new int[21];
         int i, s, a;
@@ -164,7 +164,7 @@ public class MBC
     }
 
     /* Decode a single prefix code. The algorithm used is naive and slow. */
-    short get_sym()
+    private short get_sym()
     {
         int s = 0, x = 0, k = 0;
         do
@@ -179,7 +179,7 @@ public class MBC
     }
 
     /* Retrieve bitmap. */
-    void bmp()
+    private void bmp()
     {
         int i, j;
         short b = (short) get( 16 );
@@ -202,7 +202,7 @@ public class MBC
     }
 
     /* Retrieve selector MTF values. */
-    void smtf()
+    private void smtf()
     {
         int g;
         for ( g = 0; g < ns; g++ )
@@ -218,7 +218,7 @@ public class MBC
     }
 
     /* Retrieve code lengths. */
-    void trees()
+    private void trees()
     {
         int t, s;
         for ( t = 0; t < nt; t++ )
@@ -240,7 +240,7 @@ public class MBC
     }
 
     /* Retrieve block MTF values. */
-    void data()
+    private void data()
     {
         int g, i, t;
         int[] m = new int[6];
@@ -263,7 +263,7 @@ public class MBC
     }
 
     /* Retrieve block. */
-    void retr()
+    private void retr()
     {
         rnd = get( 1 ) != 0;
         idx = get( 24 );
@@ -278,7 +278,7 @@ public class MBC
     }
 
     /* Apply IMTF transformation. */
-    void imtf()
+    private void imtf()
     {
         int i, s, r, h;
         byte t;
@@ -310,7 +310,7 @@ public class MBC
     }
 
     /* Apply IBWT transformation. */
-    void ibwt()
+    private void ibwt()
     {
         int i, c;
         int[] f = new int[256];
@@ -333,7 +333,7 @@ public class MBC
     }
 
     /* Derandomize block if it's randomized. */
-    void derand()
+    private void derand()
     {
         int i = 0, j = 617;
         while ( rnd && j < bs )
@@ -345,7 +345,7 @@ public class MBC
     }
 
     /* Emit block. RLE is undone here. */
-    void emit()
+    private void emit()
     {
         int i, r, c, d;
         r = 0;
@@ -378,7 +378,7 @@ public class MBC
     }
 
     /* Parse stream and bock headers, decompress any blocks found. */
-    void expand()
+    public void expand()
     {
         int t = 0, c;
         init_crc();
