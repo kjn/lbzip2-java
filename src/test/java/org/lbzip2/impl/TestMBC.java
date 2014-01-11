@@ -21,7 +21,6 @@ import static org.junit.Assert.fail;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.PrintStream;
 import java.security.MessageDigest;
 
 import org.junit.Test;
@@ -46,10 +45,8 @@ public class TestMBC
         try
         {
             File bzf = new File( "test-data/" + name + ".bz2" );
-            System.setIn( new FileInputStream( bzf ) );
             ByteArrayOutputStream out = new ByteArrayOutputStream();
-            System.setOut( new PrintStream( out ) );
-            MBC mbc = new MBC();
+            MBC mbc = new MBC( new FileInputStream( bzf ), out );
             mbc.expand();
             if ( md5 == null )
                 fail();

@@ -24,11 +24,23 @@ import static org.lbzip2.impl.PrefixDecoder.RUN_A;
 import static org.lbzip2.impl.Unsigned.uge;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 import org.lbzip2.StreamFormatException;
 
 public class MBC
 {
+    private final InputStream in;
+
+    private final OutputStream out;
+
+    public MBC( InputStream in, OutputStream out )
+    {
+        this.in = in;
+        this.out = out;
+    }
+
     private static void err( String msg )
         throws StreamFormatException
     {
@@ -36,16 +48,17 @@ public class MBC
     }
 
     /* Read a single byte from stdin. */
-    private static int read()
+    private int read()
         throws IOException
     {
-        return System.in.read();
+        return in.read();
     }
 
     /* Write a single byte to stdout. */
-    private static void write( int c )
+    private void write( int c )
+        throws IOException
     {
-        System.out.write( c );
+        out.write( c );
     }
 
     /* Print an error message and terminate. */
@@ -104,7 +117,7 @@ public class MBC
     {
         while ( bk < n )
         {
-            long c = System.in.read();
+            long c = in.read();
             if ( c < 0 )
                 bad();
             bk += 8;
@@ -338,7 +351,7 @@ public class MBC
 
     /* Emit block. RLE is undone here. */
     private void emit()
-        throws StreamFormatException
+        throws StreamFormatException, IOException
     {
         int i, r, c, d;
         r = 0;
