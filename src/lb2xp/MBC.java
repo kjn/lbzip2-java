@@ -135,7 +135,7 @@ public class MBC
         {
             crctab[i] = i << 24;
             for ( k = 0; k < 8; k++ )
-                crctab[i] = ( ( crctab[i] << 1 ) & 0xFFFFFFFF ) ^ ( 0x04C11DB7 & -( crctab[i] >> 31 ) );
+                crctab[i] = ( ( crctab[i] << 1 ) & 0xFFFFFFFF ) ^ ( 0x04C11DB7 & -( crctab[i] >>> 31 ) );
         }
     }
 
@@ -188,7 +188,7 @@ public class MBC
         {
             if ( b < 0 )
             {
-                int s = get( 16 );
+                short s = (short) get( 16 );
                 for ( j = 0; j < 16; j++ )
                 {
                     if ( s < 0 )
@@ -353,8 +353,8 @@ public class MBC
         for ( i = 0; i < bs; i++ )
         {
             d = c;
-            c = blk[i];
-            crc = ( ( crc << 8 ) & 0xFFFFFFFF ) ^ crctab[( crc >> 24 ) ^ c];
+            c = blk[i] & 0xFF;
+            crc = ( ( crc << 8 ) & 0xFFFFFFFF ) ^ crctab[( crc >>> 24 ) ^ c];
             write( c );
             if ( c != d )
                 r = 1;
