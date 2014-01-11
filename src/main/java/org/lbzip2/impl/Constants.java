@@ -59,6 +59,12 @@ class Constants
             176, 193, 713, 857, 265, 203, 50, 668, 108, 645, 990, 626, 197, 510, 357, 358, 850, 858, 364, 936, 638, };
 
     /**
+     * Block size threshold above which block randomization has any effect. Randomizing blocks of size <= {@code
+     * RAND_THRESH} is a no-op.
+     */
+    static final int RAND_THRESH = 617;
+
+    /**
      * Maximal alphabet size.
      * <p>
      * Alphabet consists of exactly two RUN symbols, from 0 to 255 MTF values and one EOB symbol. This makes possible
