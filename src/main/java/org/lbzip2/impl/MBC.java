@@ -422,4 +422,23 @@ public class MBC
         }
         while ( read() == 0x42 && read() == 0x5A && read() == 0x68 && ( t = get( 8 ) - 0x31 ) < 9 );
     }
+
+    public static void main( String[] args )
+    {
+        try
+        {
+            MBC mbc = new MBC( System.in, System.out );
+            mbc.expand();
+        }
+        catch ( StreamFormatException e )
+        {
+            System.err.println( "Data error" );
+            System.exit( 1 );
+        }
+        catch ( IOException e )
+        {
+            e.printStackTrace();
+            System.exit( 2 );
+        }
+    }
 }
