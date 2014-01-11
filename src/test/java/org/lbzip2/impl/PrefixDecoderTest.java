@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2013 Mikolaj Izdebski
+ * Copyright (c) 2013-2014 Mikolaj Izdebski
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ public class PrefixDecoderTest
 
     public void testIncompleteCode()
     {
-        int[] lengths = new int[] { 7, 5, 4, 1 };
+        byte[] lengths = new byte[] { 7, 5, 4, 1 };
 
         try
         {
@@ -62,7 +62,7 @@ public class PrefixDecoderTest
 
     public void testOversubscribedCode()
     {
-        int[] lengths = new int[] { 3, 1, 3, 1, 3 };
+        byte[] lengths = new byte[] { 3, 1, 3, 1, 3 };
 
         try
         {
@@ -84,10 +84,10 @@ public class PrefixDecoderTest
         for ( int iter = 0; iter < N_ITER; iter++ )
         {
             int as = random.nextInt( MAX_ALPHA_SIZE - 1 ) + 2;
-            int[] len = new int[as];
+            byte[] len = new byte[as];
 
             for ( int v = 0; v < as; v++ )
-                len[v] = random.nextInt( MAX_CODE_LENGTH ) + 1;
+                len[v] = (byte) ( random.nextInt( MAX_CODE_LENGTH ) + 1 );
 
             double kraftSum = 0;
             for ( int v = 0; v < as; v++ )

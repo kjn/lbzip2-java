@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2013 Mikolaj Izdebski
+ * Copyright (c) 2013-2014 Mikolaj Izdebski
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -134,7 +134,7 @@ class PrefixDecoder
      * @param n alphabet size
      * @throws StreamFormatException if given code set is incomplete or invalid
      */
-    void make_tree( int[] L, int n )
+    void make_tree( byte[] L, int n )
         throws StreamFormatException
     {
         int[] C; /* code length count; C[0] is a sentinel */

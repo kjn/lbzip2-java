@@ -162,19 +162,6 @@ public class MBC
         return x;
     }
 
-    /*
-     * Create decode tables using code lengths from `lens[t]'. `t' is the tree selector, must be in range [0,nt).
-     */
-    private void make_tree( int t )
-        throws StreamFormatException
-    {
-        // TODO: avoid copying arrays
-        int[] L = new int[as];
-        for ( int i = 0; i < as; i++ )
-            L[i] = len[t][i];
-        pd.make_tree( L, as );
-    }
-
     /* Decode a single prefix code. The algorithm used is naive and slow. */
     private short get_sym()
         throws StreamFormatException, IOException
@@ -283,7 +270,7 @@ public class MBC
             while ( i-- > 0 )
                 m[i + 1] = m[i];
             m[0] = t;
-            make_tree( t );
+            pd.make_tree( len[t], as );
             for ( i = 0; i < 50; i++ )
                 if ( ( mv[nm++] = get_sym() ) == EOB )
                     return;
