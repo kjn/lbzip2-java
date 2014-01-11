@@ -49,7 +49,7 @@ public class MBC
         err( "Data error" );
     }
 
-    private int bb; /* the bit-buffer (static, right-aligned) */
+    private long bb; /* the bit-buffer (left-justified) */
 
     private int bk; /* number of bits remaining in the `bb' bit-buffer */
 
@@ -127,17 +127,37 @@ public class MBC
             372, 567, 466, 434, 645, 210, 389, 550, 919, 135, 780, 773, 635, 389, 707, 100, 626, 958, 165, 504, 920,
             176, 193, 713, 857, 265, 203, 50, 668, 108, 645, 990, 626, 197, 510, 357, 358, 850, 858, 364, 936, 638, };
 
+    private void need( int n )
+        throws StreamFormatException, IOException
+    {
+        while ( bk < n )
+        {
+            long c = System.in.read();
+            if ( c < 0 )
+                bad();
+            bk += 8;
+            bb += c << ( 64 - bk );
+        }
+    }
+
+    private int peek( int n )
+    {
+        return (int) ( bb >>> ( 64 - n ) );
+    }
+
+    private void dump( int n )
+    {
+        bb <<= n;
+        bk -= n;
+    }
+
     /* Read and return `n' bits from the input stream. `n' must be <= 32. */
     private int get( int n )
         throws StreamFormatException, IOException
     {
-        int x = 0;
-        while ( n-- != 0 )
-        {
-            if ( bk-- == 0 && ( bb = read() ) < 0 )
-                bad();
-            x = 2 * x + ( ( bb >> ( bk &= 7 ) ) & 1 );
-        }
+        need( n );
+        int x = peek( n );
+        dump( n );
         return x;
     }
 
