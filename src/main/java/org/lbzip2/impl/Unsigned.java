@@ -85,7 +85,7 @@ final class Unsigned
      * 
      * @param a
      * @param b
-     * @return {@code a ≻ b}
+     * @return {@code a > b}
      */
     static final boolean ugt( int a, int b )
     {
@@ -97,7 +97,7 @@ final class Unsigned
      * 
      * @param a
      * @param b
-     * @return {@code a ≻ b}
+     * @return {@code a > b}
      */
     static final boolean ugt( long a, long b )
     {
