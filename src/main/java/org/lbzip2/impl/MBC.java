@@ -284,8 +284,9 @@ public class MBC
     private void imtf()
         throws StreamFormatException
     {
-        int i, s, r, h;
+        int i, s, r, h, c;
         bs = r = h = 0;
+        c = mtf.imtf_slide[mtf.imtf_row[0]] & 0xFF;
         for ( i = 0; i < nm; i++ )
         {
             s = mv[i];
@@ -301,10 +302,10 @@ public class MBC
                 if ( bs + r > mbs )
                     bad();
                 while ( r-- != 0 )
-                    tt[bs++] = mtf.imtf_slide[mtf.imtf_row[0]] & 0xFF;
+                    tt[bs++] = c;
                 if ( s == EOB )
                     break;
-                mtf.mtf_one( s );
+                c = mtf.mtf_one( s );
                 h = 0;
                 r = 1;
             }
