@@ -57,7 +57,7 @@ class PrefixDecoder
      * it costs to decode the longer codes is then traded against the time it takes to make longer tables.
      * <p>
      * This result of this trade are in this constant. {@code HUFF_START_WIDTH} is the number of bits the first level
-     * table can decode in one step. Subsequent tables always decode one bit at time. The current value of %{code
+     * table can decode in one step. Subsequent tables always decode one bit at time. The current value of {@code
      * HUFF_START_WIDTH} was determined with a series of benchmarks. The optimum value may differ though from machine to
      * machine, and possibly even between compilers. Your mileage may vary.
      */
@@ -75,9 +75,9 @@ class PrefixDecoder
     /**
      * Base codes.
      * <p>
-     * For {@code k} in 1..20, {@code base[k]} is either the first code of length {@code k} or it is equal to
-     * {@code base[k+1]} if there are no codes of length {@code k}. The other 2 elements are sentinels: {@code base[0]}
-     * is always zero, {@code base[MAX_CODE_LENGTH+1]} is plus infinity (represented as {@code -1L}).
+     * For {@code k} in 1..20, {@code base[k]} is either the first code of length {@code k} or it is equal to {@code
+     * base[k+1]} if there are no codes of length {@code k}. The other 2 elements are sentinels: {@code base[0]} is
+     * always zero, {@code base[MAX_CODE_LENGTH+1]} is plus infinity (represented as {@code -1L}).
      */
     final long[] base;
 
@@ -197,13 +197,13 @@ class PrefixDecoder
          * possible 64-bit value (which is greater than the greatest possible left-justified base).
          */
         assert ( k == MAX_CODE_LENGTH + 1 );
-        k = MAX_CODE_LENGTH;
-        while ( C[k] == 0 )
+        do
         {
             assert ( k > MIN_CODE_LENGTH );
-            assert ( B[k] == 0 );
+            assert ( k > MAX_CODE_LENGTH || B[k] == 0 );
             B[k--] = -1;
         }
+        while ( C[k] == 0 );
 
         /* Transform counts into indices (cumulative counts). */
         cum = 0;
