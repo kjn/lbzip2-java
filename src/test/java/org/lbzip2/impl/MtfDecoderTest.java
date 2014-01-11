@@ -76,9 +76,9 @@ public class MtfDecoderTest
         {
             int x = random.nextInt( 256 );
             int y = mtf_one( x );
-            byte y0 = decoder.mtf_one( (byte) x );
+            int y0 = decoder.mtf_one( x );
 
-            assertEquals( y, y0 & 0xff );
+            assertEquals( y, y0 );
         }
     }
 }

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2013 Mikolaj Izdebski
+ * Copyright (c) 2013-2014 Mikolaj Izdebski
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,12 +63,12 @@ class MtfDecoder
      * @param c byte to be transformed
      * @return transformation result
      */
-    byte mtf_one( byte c )
+    int mtf_one( int nn )
     {
+        byte c;
         int pp;
 
         /* We expect the index to be small, so we have a special case for that. */
-        int nn = c & 0xff;
         if ( nn < ROW_WIDTH )
         {
 
@@ -105,10 +105,10 @@ class MtfDecoder
                 }
             }
 
-            int lno = ( c >> 4 ) & 0xf;
+            int lno = ( nn >> 4 ) & 0xf;
             int bb = imtf_row[lno];
 
-            pp = bb + ( c & 0xf );
+            pp = bb + ( nn & 0xf );
             c = imtf_slide[pp];
 
             while ( pp > bb )
@@ -126,6 +126,6 @@ class MtfDecoder
         }
 
         imtf_slide[pp] = c;
-        return c;
+        return c & 0xFF;
     }
 }

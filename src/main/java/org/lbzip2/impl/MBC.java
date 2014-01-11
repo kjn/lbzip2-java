@@ -18,6 +18,7 @@ package org.lbzip2.impl;
 import static org.lbzip2.impl.Constants.MAX_CODE_LENGTH;
 import static org.lbzip2.impl.Constants.crc_table;
 import static org.lbzip2.impl.Constants.rand_table;
+import static org.lbzip2.impl.MtfDecoder.CMAP_BASE;
 import static org.lbzip2.impl.PrefixDecoder.EOB;
 import static org.lbzip2.impl.PrefixDecoder.HUFF_START_WIDTH;
 import static org.lbzip2.impl.PrefixDecoder.RUN_A;
@@ -104,7 +105,7 @@ public class MBC
 
     private final byte[] sel = new byte[32767]; /* selector MTF values */
 
-    private final byte[] mtf = new byte[256]; /* IMTF register */
+    private final MtfDecoder mtf = new MtfDecoder();
 
     private final PrefixDecoder pd = new PrefixDecoder();
 
@@ -181,6 +182,7 @@ public class MBC
         int i, j;
         short b = (short) get( 16 );
         as = 0;
+        mtf.initialize();
         for ( i = 0; i < 16; i++ )
         {
             if ( b < 0 )
@@ -189,7 +191,7 @@ public class MBC
                 for ( j = 0; j < 16; j++ )
                 {
                     if ( s < 0 )
-                        mtf[as++] = (byte) ( 16 * i + j );
+                        mtf.imtf_slide[CMAP_BASE + as++] = (byte) ( 16 * i + j );
                     s *= 2;
                 }
             }
@@ -283,7 +285,6 @@ public class MBC
         throws StreamFormatException
     {
         int i, s, r, h;
-        byte t;
         bs = r = h = 0;
         for ( i = 0; i < nm; i++ )
         {
@@ -300,13 +301,10 @@ public class MBC
                 if ( bs + r > mbs )
                     bad();
                 while ( r-- != 0 )
-                    tt[bs++] = mtf[0] & 0xFF;
+                    tt[bs++] = mtf.imtf_slide[mtf.imtf_row[0]] & 0xFF;
                 if ( s == EOB )
                     break;
-                t = mtf[s];
-                while ( s-- > 0 )
-                    mtf[s + 1] = mtf[s];
-                mtf[0] = t;
+                mtf.mtf_one( s );
                 h = 0;
                 r = 1;
             }
