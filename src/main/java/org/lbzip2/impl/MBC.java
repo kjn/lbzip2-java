@@ -15,7 +15,12 @@
  */
 package org.lbzip2.impl;
 
+import static org.lbzip2.impl.Constants.MAX_CODE_LENGTH;
 import static org.lbzip2.impl.Constants.crc_table;
+import static org.lbzip2.impl.PrefixDecoder.EOB;
+import static org.lbzip2.impl.PrefixDecoder.HUFF_START_WIDTH;
+import static org.lbzip2.impl.PrefixDecoder.RUN_A;
+import static org.lbzip2.impl.Unsigned.uge;
 
 import java.io.IOException;
 
@@ -87,11 +92,7 @@ public class MBC
 
     private final byte[] mtf = new byte[256]; /* IMTF register */
 
-    private final int[] count = new int[21]; /*
-                                              * number of codes of given length (element 0 is a sentinel)
-                                              */
-
-    private final short[] sorted = new short[258]; /* symbols sorted by ascend. code length */
+    private final PrefixDecoder pd = new PrefixDecoder();
 
     private final short[] mv = new short[900050]; /*
                                                    * MTF values (elements 900000-900049 are sentinels)
@@ -167,39 +168,39 @@ public class MBC
     private void make_tree( int t )
         throws StreamFormatException
     {
-        int[] u = new int[21];
-        int i, s, a;
-        for ( i = 0; i <= 20; i++ )
-            count[i] = 0;
-        for ( i = 0; i < as; i++ )
-            count[len[t][i]]++;
-        for ( a = 1, s = 0, i = 0; i <= 20; i++ )
-        {
-            u[i] = s;
-            a *= 2;
-            if ( count[i] > a )
-                bad();
-            a -= count[i];
-            s += count[i];
-        }
-        for ( i = 0; i < as; i++ )
-            sorted[u[len[t][i]]++] = (short) i;
+        // TODO: avoid copying arrays
+        int[] L = new int[as];
+        for ( int i = 0; i < as; i++ )
+            L[i] = len[t][i];
+        pd.make_tree( L, as );
     }
 
     /* Decode a single prefix code. The algorithm used is naive and slow. */
     private short get_sym()
         throws StreamFormatException, IOException
     {
-        int s = 0, x = 0, k = 0;
-        do
+        need( MAX_CODE_LENGTH );
+        int x = pd.start[peek( HUFF_START_WIDTH )];
+        int k = x & 0x1F;
+        short s;
+
+        if ( k <= HUFF_START_WIDTH )
         {
-            if ( k == 20 )
-                bad();
-            x = 2 * x + get( 1 );
-            s += count[++k];
+            /* Use look-up table in average case. */
+            s = (short) ( x >> 5 );
         }
-        while ( ( x -= count[k] ) >= 0 );
-        return sorted[s + x];
+        else
+        {
+            /*
+             * Code length exceeds HUFF_START_WIDTH, use canonical prefix decoding algorithm instead of look-up table.
+             */
+            while ( uge( bb, pd.base[k + 1] ) )
+                k++;
+            s = pd.perm[pd.count[k] + (int) ( ( bb - pd.base[k] ) >>> ( 64 - k ) )];
+        }
+
+        dump( k );
+        return s;
     }
 
     /* Retrieve bitmap. */
@@ -284,7 +285,7 @@ public class MBC
             m[0] = t;
             make_tree( t );
             for ( i = 0; i < 50; i++ )
-                if ( ( mv[nm++] = get_sym() ) == as - 1 )
+                if ( ( mv[nm++] = get_sym() ) == EOB )
                     return;
         }
         bad();
@@ -316,9 +317,9 @@ public class MBC
         for ( i = 0; i < nm; i++ )
         {
             s = mv[i];
-            if ( s <= 1 )
+            if ( s >= RUN_A )
             {
-                r += 1 << ( h + s );
+                r += 1 << ( h + s - RUN_A );
                 h++;
                 if ( r < 0 )
                     bad();
@@ -329,9 +330,9 @@ public class MBC
                     bad();
                 while ( r-- != 0 )
                     tt[bs++] = mtf[0] & 0xFF;
-                if ( s + 1 == as )
+                if ( s == EOB )
                     break;
-                t = mtf[--s];
+                t = mtf[s];
                 while ( s-- > 0 )
                     mtf[s + 1] = mtf[s];
                 mtf[0] = t;
