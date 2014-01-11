@@ -1,4 +1,4 @@
-package lb2xp;
+package org.lbzip2.impl;
 
 import java.io.IOException;
 

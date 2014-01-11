@@ -1,4 +1,4 @@
-package lb2xp;
+package org.lbzip2.impl;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
