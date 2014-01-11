@@ -83,6 +83,16 @@ class Constants
     static final int MIN_CODE_LENGTH = 1;
 
     /**
+     * Maximal number of tree selectors in one block.
+     */
+    static final int MAX_SELECTORS = 18001;
+
+    /**
+     * Maximal number of coding trees in one block.
+     */
+    static final int MAX_TREES = 6;
+
+    /**
      * Initialize CRC table.
      */
     static
