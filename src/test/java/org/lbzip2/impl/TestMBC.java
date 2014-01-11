@@ -10,6 +10,7 @@ import java.io.PrintStream;
 import java.security.MessageDigest;
 
 import org.junit.Test;
+import org.lbzip2.StreamFormatException;
 
 public class TestMBC
 {
@@ -39,7 +40,7 @@ public class TestMBC
                 fail();
             assertEquals( md5, md5( out.toByteArray() ) );
         }
-        catch ( RuntimeException e )
+        catch ( StreamFormatException e )
         {
             if ( md5 != null )
                 throw e;

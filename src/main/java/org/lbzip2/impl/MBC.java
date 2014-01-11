@@ -2,24 +2,21 @@ package org.lbzip2.impl;
 
 import java.io.IOException;
 
+import org.lbzip2.StreamFormatException;
+
 public class MBC
 {
     private static void err( String msg )
+        throws StreamFormatException
     {
-        throw new RuntimeException( msg );
+        throw new StreamFormatException( msg );
     }
 
     /* Read a single byte from stdin. */
     private static int read()
+        throws IOException
     {
-        try
-        {
-            return System.in.read();
-        }
-        catch ( IOException e )
-        {
-            throw new RuntimeException( e );
-        }
+        return System.in.read();
     }
 
     /* Write a single byte to stdout. */
@@ -30,6 +27,7 @@ public class MBC
 
     /* Print an error message and terminate. */
     private static void bad()
+        throws StreamFormatException
     {
         err( "Data error" );
     }
@@ -116,6 +114,7 @@ public class MBC
 
     /* Read and return `n' bits from the input stream. `n' must be <= 32. */
     private int get( int n )
+        throws StreamFormatException, IOException
     {
         int x = 0;
         while ( n-- != 0 )
@@ -143,6 +142,7 @@ public class MBC
      * Create decode tables using code lengths from `lens[t]'. `t' is the tree selector, must be in range [0,nt).
      */
     private void make_tree( int t )
+        throws StreamFormatException
     {
         int[] u = new int[21];
         int i, s, a;
@@ -165,6 +165,7 @@ public class MBC
 
     /* Decode a single prefix code. The algorithm used is naive and slow. */
     private short get_sym()
+        throws StreamFormatException, IOException
     {
         int s = 0, x = 0, k = 0;
         do
@@ -180,6 +181,7 @@ public class MBC
 
     /* Retrieve bitmap. */
     private void bmp()
+        throws StreamFormatException, IOException
     {
         int i, j;
         short b = (short) get( 16 );
@@ -203,6 +205,7 @@ public class MBC
 
     /* Retrieve selector MTF values. */
     private void smtf()
+        throws StreamFormatException, IOException
     {
         int g;
         for ( g = 0; g < ns; g++ )
@@ -219,6 +222,7 @@ public class MBC
 
     /* Retrieve code lengths. */
     private void trees()
+        throws StreamFormatException, IOException
     {
         int t, s;
         for ( t = 0; t < nt; t++ )
@@ -241,6 +245,7 @@ public class MBC
 
     /* Retrieve block MTF values. */
     private void data()
+        throws StreamFormatException, IOException
     {
         int g, i, t;
         int[] m = new int[6];
@@ -264,6 +269,7 @@ public class MBC
 
     /* Retrieve block. */
     private void retr()
+        throws StreamFormatException, IOException
     {
         rnd = get( 1 ) != 0;
         idx = get( 24 );
@@ -279,6 +285,7 @@ public class MBC
 
     /* Apply IMTF transformation. */
     private void imtf()
+        throws StreamFormatException
     {
         int i, s, r, h;
         byte t;
@@ -311,6 +318,7 @@ public class MBC
 
     /* Apply IBWT transformation. */
     private void ibwt()
+        throws StreamFormatException
     {
         int i, c;
         int[] f = new int[256];
@@ -346,6 +354,7 @@ public class MBC
 
     /* Emit block. RLE is undone here. */
     private void emit()
+        throws StreamFormatException
     {
         int i, r, c, d;
         r = 0;
@@ -379,6 +388,7 @@ public class MBC
 
     /* Parse stream and bock headers, decompress any blocks found. */
     public void expand()
+        throws StreamFormatException, IOException
     {
         int t = 0, c;
         init_crc();
