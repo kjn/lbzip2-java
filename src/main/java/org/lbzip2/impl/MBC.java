@@ -297,6 +297,8 @@ public class MBC
             {
                 r += 1 << ( h + s );
                 h++;
+                if ( r < 0 )
+                    bad();
             }
             else
             {
