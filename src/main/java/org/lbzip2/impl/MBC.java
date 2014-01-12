@@ -81,8 +81,6 @@ public class MBC
 
     private int ns; /* number of selectors (1-32767) */
 
-    private int nm; /* number of MTF values */
-
     private final byte[][] len = new byte[6][259]; /*
                                                     * code lengths for different trees (element 258 is a sentinel)
                                                     */
@@ -92,10 +90,6 @@ public class MBC
     private final MtfDecoder mtf = new MtfDecoder();
 
     private final PrefixDecoder pd = new PrefixDecoder();
-
-    private final short[] mv = new short[900050]; /*
-                                                   * MTF values (elements 900000-900049 are sentinels)
-                                                   */
 
     private void need( int n )
         throws StreamFormatException, IOException
@@ -224,15 +218,18 @@ public class MBC
         }
     }
 
-    /* Retrieve block MTF values. */
+    /* Retrieve block MTF values and apply IMTF transformation.. */
     private void data()
         throws StreamFormatException, IOException
     {
         int g, i, t;
+        int s, r, h, c;
+        ds.block_size = r = h = 0;
+        Arrays.fill( ds.ftab, 0 );
+        c = mtf.imtf_slide[mtf.imtf_row[0]] & 0xFF;
         int[] m = new int[6];
         for ( i = 0; i < 6; i++ )
             m[i] = i;
-        nm = 0;
         for ( g = 0; g < ns; g++ )
         {
             i = sel[g];
@@ -242,8 +239,29 @@ public class MBC
             m[0] = t;
             pd.make_tree( len[t], as );
             for ( i = 0; i < 50; i++ )
-                if ( ( mv[nm++] = get_sym() ) == EOB )
-                    return;
+            {
+                s = get_sym();
+                if ( s >= RUN_A )
+                {
+                    r += 1 << ( h + s - RUN_A );
+                    h++;
+                    if ( r < 0 )
+                        bad();
+                }
+                else
+                {
+                    if ( ds.block_size + r > mbs )
+                        bad();
+                    ds.ftab[c] += r;
+                    while ( r-- != 0 )
+                        ds.tt[ds.block_size++] = c;
+                    if ( s == EOB )
+                        return;
+                    c = mtf.mtf_one( s );
+                    h = 0;
+                    r = 1;
+                }
+            }
         }
         bad();
     }
@@ -262,40 +280,6 @@ public class MBC
         smtf();
         trees();
         data();
-    }
-
-    /* Apply IMTF transformation. */
-    private void imtf()
-        throws StreamFormatException
-    {
-        int i, s, r, h, c;
-        ds.block_size = r = h = 0;
-        Arrays.fill( ds.ftab, 0 );
-        c = mtf.imtf_slide[mtf.imtf_row[0]] & 0xFF;
-        for ( i = 0; i < nm; i++ )
-        {
-            s = mv[i];
-            if ( s >= RUN_A )
-            {
-                r += 1 << ( h + s - RUN_A );
-                h++;
-                if ( r < 0 )
-                    bad();
-            }
-            else
-            {
-                if ( ds.block_size + r > mbs )
-                    bad();
-                ds.ftab[c] += r;
-                while ( r-- != 0 )
-                    ds.tt[ds.block_size++] = c;
-                if ( s == EOB )
-                    break;
-                c = mtf.mtf_one( s );
-                h = 0;
-                r = 1;
-            }
-        }
     }
 
     private void decode_and_emit()
@@ -340,7 +324,6 @@ public class MBC
                     bad();
                 t = get( 32 );
                 retr();
-                imtf();
                 decode_and_emit();
                 if ( ds.crc != t )
                     bad();
