@@ -20,6 +20,7 @@ import static org.lbzip2.impl.MtfDecoder.CMAP_BASE;
 import static org.lbzip2.impl.PrefixDecoder.EOB;
 import static org.lbzip2.impl.PrefixDecoder.HUFF_START_WIDTH;
 import static org.lbzip2.impl.PrefixDecoder.RUN_A;
+import static org.lbzip2.impl.Status.MORE;
 import static org.lbzip2.impl.Status.OK;
 import static org.lbzip2.impl.Unsigned.uge;
 
@@ -305,12 +306,18 @@ public class MBC
 
         ds.decode();
 
-        byte[] buf = new byte[50000000];
+        byte[] buf = new byte[4096];
         int[] len = new int[1];
-        len[0] = buf.length;
-        Status status = ds.emit( buf, 0, len );
+
+        Status status;
+        do
+        {
+            len[0] = buf.length;
+            status = ds.emit( buf, 0, len );
+            out.write( buf, 0, buf.length - len[0] );
+        }
+        while ( status == MORE );
         assert ( status == OK );
-        out.write( buf, 0, buf.length - len[0] );
     }
 
     /* Parse stream and bock headers, decompress any blocks found. */
