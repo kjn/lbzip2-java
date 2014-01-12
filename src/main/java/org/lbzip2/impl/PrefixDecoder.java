@@ -57,9 +57,9 @@ class PrefixDecoder
      * it costs to decode the longer codes is then traded against the time it takes to make longer tables.
      * <p>
      * This result of this trade are in this constant. {@code HUFF_START_WIDTH} is the number of bits the first level
-     * table can decode in one step. Subsequent tables always decode one bit at time. The current value of {@code
-     * HUFF_START_WIDTH} was determined with a series of benchmarks. The optimum value may differ though from machine to
-     * machine, and possibly even between compilers. Your mileage may vary.
+     * table can decode in one step. Subsequent tables always decode one bit at time. The current value of
+     * {@code HUFF_START_WIDTH} was determined with a series of benchmarks. The optimum value may differ though from
+     * machine to machine, and possibly even between compilers. Your mileage may vary.
      */
     static final int HUFF_START_WIDTH = 10;
 
@@ -75,9 +75,9 @@ class PrefixDecoder
     /**
      * Base codes.
      * <p>
-     * For {@code k} in 1..20, {@code base[k]} is either the first code of length {@code k} or it is equal to {@code
-     * base[k+1]} if there are no codes of length {@code k}. The other 2 elements are sentinels: {@code base[0]} is
-     * always zero, {@code base[MAX_CODE_LENGTH+1]} is plus infinity (represented as {@code -1L}).
+     * For {@code k} in 1..20, {@code base[k]} is either the first code of length {@code k} or it is equal to
+     * {@code base[k+1]} if there are no codes of length {@code k}. The other 2 elements are sentinels: {@code base[0]}
+     * is always zero, {@code base[MAX_CODE_LENGTH+1]} is plus infinity (represented as {@code -1L}).
      */
     final long[] base;
 
