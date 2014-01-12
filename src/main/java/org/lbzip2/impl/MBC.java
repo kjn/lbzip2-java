@@ -308,10 +308,10 @@ public class MBC
     public void expand()
         throws StreamFormatException, IOException
     {
-        int t = 0, c;
+        int t, c;
         if ( get( 24 ) != 0x425A68 )
             bad();
-        t = get( 8 ) - 0x31;
+        t = ( get( 8 ) - 0x31 ) & 0xFF;
         if ( t >= 9 )
             bad();
         do
