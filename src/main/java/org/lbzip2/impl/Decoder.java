@@ -16,7 +16,12 @@
 package org.lbzip2.impl;
 
 import static org.lbzip2.impl.Constants.RAND_THRESH;
+import static org.lbzip2.impl.Constants.crc_table;
 import static org.lbzip2.impl.Constants.rand_table;
+import static org.lbzip2.impl.Status.MORE;
+import static org.lbzip2.impl.Status.OK;
+
+import org.lbzip2.StreamFormatException;
 
 class Decoder
 {
@@ -118,5 +123,241 @@ class Decoder
         rle_avail = block_size;
         rle_prev = 0;
         rle_char = 0;
+    }
+
+    /**
+     * Emit decoded block into buffer buf of size *buf_sz. Buffer size is updated to reflect the remaining space left in
+     * the buffer.
+     * <p>
+     * Returns OK if the block was completely emitted, MORE if more output space is needed to fully emit the block or
+     * ERR_RUNLEN if data error was detected (missing run length).
+     * 
+     * @throws StreamFormatException
+     */
+    Status emit( byte[] buf, int off, int[] buf_sz )
+        throws StreamFormatException
+    {
+        int p; /* IBWT linked list pointer */
+        int a; /* available input bytes */
+        int s; /* CRC checksum */
+        int c; /* current character */
+        int d; /* next character */
+        int[] t; /* IBWT linked list base address */
+        int b; /* next free byte in output buffer */
+        int m; /* number of free output bytes available */
+
+        t = tt;
+        b = off;
+        m = buf_sz[0];
+
+        s = rle_crc;
+        p = rle_index;
+        a = rle_avail;
+        c = rle_char;
+        d = rle_prev;
+
+        /* === UNRLE FINITE STATE AUTOMATON === */
+        /* There are 6 states, numbered from 0 to 5. */
+
+        /*
+         * Excuse me, but the following is a write-only code. It wasn't written for readability or maintainability, but
+         * rather for high efficiency.
+         */
+        switch ( rle_state )
+        {
+            default:
+                throw new IllegalStateException();
+            case 1:
+                if ( m-- == 0 )
+                    break;
+                s = ( s << 8 ) ^ crc_table[( s >> 24 ) ^ ( buf[b++] = (byte) c )];
+                if ( c != d )
+                    break;
+                if ( a-- == 0 )
+                    break;
+                p = t[p >> 8];
+                c = p & 0xFF;
+            case 2:
+                if ( m-- == 0 )
+                {
+                    rle_state = 2;
+                    break;
+                }
+                s = ( s << 8 ) ^ crc_table[( s >> 24 ) ^ ( buf[b++] = (byte) c )];
+                if ( c != d )
+                    break;
+                if ( a-- == 0 )
+                    break;
+                p = t[p >> 8];
+                c = p & 0xFF;
+            case 3:
+                if ( m-- == 0 )
+                {
+                    rle_state = 3;
+                    break;
+                }
+                s = ( s << 8 ) ^ crc_table[( s >> 24 ) ^ ( buf[b++] = (byte) c )];
+                if ( c != d )
+                    break;
+                if ( a-- == 0 )
+                    throw new StreamFormatException( "ERR_RUNLEN" );
+                p = t[p >> 8];
+                c = p & 0xFF;
+            case 4:
+                if ( m < c )
+                {
+                    c -= m;
+                    while ( m-- != 0 )
+                        s = ( s << 8 ) ^ crc_table[( s >> 24 ) ^ ( buf[b++] = (byte) d )];
+                    rle_state = 4;
+                    break;
+                }
+                m -= c;
+                while ( c-- != 0 )
+                    s = ( s << 8 ) ^ crc_table[( s >> 24 ) ^ ( buf[b++] = (byte) d )];
+            case 0:
+                if ( a-- == 0 )
+                    break;
+                p = t[p >> 8];
+                c = p & 0xFF;
+            case 5:
+                if ( m-- == 0 )
+                {
+                    rle_state = 5;
+                    break;
+                }
+                s = ( s << 8 ) ^ crc_table[( s >> 24 ) ^ ( buf[b++] = (byte) c )];
+        }
+
+        if ( a != -1 && m != -1 )
+        {
+            for ( ;; )
+            {
+                if ( a-- == 0 )
+                    break;
+                d = c;
+                p = t[p >> 8];
+                c = p & 0xFF;
+                if ( m-- == 0 )
+                {
+                    rle_state = 1;
+                    break;
+                }
+                s = ( s << 8 ) ^ crc_table[( s >> 24 ) ^ ( buf[b++] = (byte) c )];
+                if ( c != d )
+                {
+                    if ( a-- == 0 )
+                        break;
+                    d = c;
+                    p = t[p >> 8];
+                    c = p & 0xFF;
+                    if ( m-- == 0 )
+                    {
+                        rle_state = 1;
+                        break;
+                    }
+                    s = ( s << 8 ) ^ crc_table[( s >> 24 ) ^ ( buf[b++] = (byte) c )];
+                    if ( c != d )
+                    {
+                        if ( a-- == 0 )
+                            break;
+                        d = c;
+                        p = t[p >> 8];
+                        c = p & 0xFF;
+                        if ( m-- == 0 )
+                        {
+                            rle_state = 1;
+                            break;
+                        }
+                        s = ( s << 8 ) ^ crc_table[( s >> 24 ) ^ ( buf[b++] = (byte) c )];
+                        if ( c != d )
+                        {
+                            if ( a-- == 0 )
+                                break;
+                            d = c;
+                            p = t[p >> 8];
+                            c = p & 0xFF;
+                            if ( m-- == 0 )
+                            {
+                                rle_state = 1;
+                                break;
+                            }
+                            s = ( s << 8 ) ^ crc_table[( s >> 24 ) ^ ( buf[b++] = (byte) c )];
+                            if ( c != d )
+                                continue;
+                        }
+                    }
+                }
+                if ( a-- == 0 )
+                    break;
+                p = t[p >> 8];
+                c = p & 0xFF;
+                if ( m-- == 0 )
+                {
+                    rle_state = 2;
+                    break;
+                }
+                s = ( s << 8 ) ^ crc_table[( s >> 24 ) ^ ( buf[b++] = (byte) c )];
+                if ( c != d )
+                    continue;
+                if ( a-- == 0 )
+                    break;
+                p = t[p >> 8];
+                c = p & 0xFF;
+                if ( m-- == 0 )
+                {
+                    rle_state = 3;
+                    break;
+                }
+                s = ( s << 8 ) ^ crc_table[( s >> 24 ) ^ ( buf[b++] = (byte) c )];
+                if ( c != d )
+                    continue;
+                if ( a-- == 0 )
+                    throw new StreamFormatException( "ERR_RUNLEN" );
+                p = t[p >> 8];
+                c = p & 0xFF;
+                if ( m < c )
+                {
+                    c -= m;
+                    while ( m-- != 0 )
+                        s = ( s << 8 ) ^ crc_table[( s >> 24 ) ^ ( buf[b++] = (byte) d )];
+                    rle_state = 4;
+                    break;
+                }
+                m -= c;
+                while ( c-- != 0 )
+                    s = ( s << 8 ) ^ crc_table[( s >> 24 ) ^ ( buf[b++] = (byte) d )];
+                if ( a-- == 0 )
+                    break;
+                p = t[p >> 8];
+                c = p & 0xFF;
+                if ( m-- == 0 )
+                {
+                    rle_state = 5;
+                    break;
+                }
+                s = ( s << 8 ) ^ crc_table[( s >> 24 ) ^ ( buf[b++] = (byte) c )];
+            }
+        }
+
+        /* Exactly one of `a' and `m' is equal to M1. */
+        assert ( ( a == -1 ) != ( m == -1 ) );
+
+        rle_avail = a;
+        if ( m == -1 )
+        {
+            assert ( a != -1 );
+            rle_index = p;
+            rle_char = c;
+            rle_prev = d;
+            rle_crc = s;
+            buf_sz[0] = 0;
+            return MORE;
+        }
+
+        assert ( a == -1 );
+        crc = s ^ -1;
+        buf_sz[0] = m;
+        return OK;
     }
 }
