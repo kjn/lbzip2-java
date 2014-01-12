@@ -16,17 +16,17 @@
 package org.lbzip2.impl;
 
 import static org.lbzip2.impl.Constants.MAX_CODE_LENGTH;
-import static org.lbzip2.impl.Constants.crc_table;
-import static org.lbzip2.impl.Constants.rand_table;
 import static org.lbzip2.impl.MtfDecoder.CMAP_BASE;
 import static org.lbzip2.impl.PrefixDecoder.EOB;
 import static org.lbzip2.impl.PrefixDecoder.HUFF_START_WIDTH;
 import static org.lbzip2.impl.PrefixDecoder.RUN_A;
+import static org.lbzip2.impl.Status.OK;
 import static org.lbzip2.impl.Unsigned.uge;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Arrays;
 
 import org.lbzip2.StreamFormatException;
 
@@ -55,13 +55,6 @@ public class MBC
         return in.read();
     }
 
-    /* Write a single byte to stdout. */
-    private void write( int c )
-        throws IOException
-    {
-        out.write( c );
-    }
-
     /* Print an error message and terminate. */
     private static void bad()
         throws StreamFormatException
@@ -73,17 +66,9 @@ public class MBC
 
     private int bk; /* number of bits remaining in the `bb' bit-buffer */
 
-    private final int[] tt = new int[900000]; /* IBWT linked cyclic list */
-
-    private int crc; /* CRC32 computed so far */
-
     private int mbs; /* maximal block size (100k-900k in 100k steps) */
 
-    private boolean rnd; /* is current block randomized? (0 or 1) */
-
-    private int bs; /* current block size (1-900000) */
-
-    private int idx; /* BWT primary index (0-899999) */
+    private final Decoder ds = new Decoder();
 
     private int as; /*
                      * alphabet size (number of distinct prefix codes, 3-258)
@@ -96,8 +81,6 @@ public class MBC
     private int ns; /* number of selectors (1-32767) */
 
     private int nm; /* number of MTF values */
-
-    private final byte[] blk = new byte[900000]; /* reconstructed block */
 
     private final byte[][] len = new byte[6][259]; /*
                                                     * code lengths for different trees (element 258 is a sentinel)
@@ -268,8 +251,8 @@ public class MBC
     private void retr()
         throws StreamFormatException, IOException
     {
-        rnd = get( 1 ) != 0;
-        idx = get( 24 );
+        ds.rand = get( 1 ) != 0;
+        ds.bwt_idx = get( 24 );
         bmp();
         nt = get( 3 );
         if ( nt < 2 || nt > 6 )
@@ -285,7 +268,7 @@ public class MBC
         throws StreamFormatException
     {
         int i, s, r, h, c;
-        bs = r = h = 0;
+        ds.block_size = r = h = 0;
         c = mtf.imtf_slide[mtf.imtf_row[0]] & 0xFF;
         for ( i = 0; i < nm; i++ )
         {
@@ -299,10 +282,10 @@ public class MBC
             }
             else
             {
-                if ( bs + r > mbs )
+                if ( ds.block_size + r > mbs )
                     bad();
                 while ( r-- != 0 )
-                    tt[bs++] = c;
+                    ds.tt[ds.block_size++] = c;
                 if ( s == EOB )
                     break;
                 c = mtf.mtf_one( s );
@@ -312,74 +295,23 @@ public class MBC
         }
     }
 
-    /* Apply IBWT transformation. */
-    private void ibwt()
-        throws StreamFormatException
-    {
-        int i, c;
-        int[] f = new int[256];
-        if ( idx >= bs )
-            bad();
-        for ( i = 0; i < 256; i++ )
-            f[i] = 0;
-        for ( i = 0; i < bs; i++ )
-            f[tt[i]]++;
-        for ( i = c = 0; i < 256; i++ )
-            f[i] = ( c += f[i] ) - f[i];
-        for ( i = 0; i < bs; i++ )
-            tt[f[tt[i] & 0xFF]++] |= i << 8;
-        idx = tt[idx];
-        for ( i = 0; i < bs; i++ )
-        {
-            idx = tt[idx >> 8];
-            blk[i] = (byte) idx;
-        }
-    }
-
-    /* Derandomize block if it's randomized. */
-    private void derand()
-    {
-        int i = 0, j = 617;
-        while ( rnd && j < bs )
-        {
-            blk[j] ^= 1;
-            i = ( i + 1 ) & 0x1FF;
-            j += rand_table[i];
-        }
-    }
-
-    /* Emit block. RLE is undone here. */
-    private void emit()
+    private void decode_and_emit()
         throws StreamFormatException, IOException
     {
-        int i, r, c, d;
-        r = 0;
-        c = -1;
-        for ( i = 0; i < bs; i++ )
-        {
-            d = c;
-            c = blk[i] & 0xFF;
-            crc = ( ( crc << 8 ) & 0xFFFFFFFF ) ^ crc_table[( crc >>> 24 ) ^ c];
-            write( c );
-            if ( c != d )
-                r = 1;
-            else
-            {
-                r++;
-                if ( r >= 4 )
-                {
-                    int j;
-                    if ( ++i == bs )
-                        bad();
-                    for ( j = 0; j < ( blk[i] & 0xFF ); j++ )
-                    {
-                        crc = ( ( crc << 8 ) & 0xFFFFFFFF ) ^ crc_table[( crc >>> 24 ) ^ c];
-                        write( c );
-                    }
-                    r = 0;
-                }
-            }
-        }
+        if ( ds.bwt_idx >= ds.block_size )
+            bad();
+        Arrays.fill( ds.ftab, 0 );
+        for ( int i = 0; i < ds.block_size; i++ )
+            ds.ftab[ds.tt[i]]++;
+
+        ds.decode();
+
+        byte[] buf = new byte[50000000];
+        int[] len = new int[1];
+        len[0] = buf.length;
+        Status status = ds.emit( buf, 0, len );
+        assert ( status == OK );
+        out.write( buf, 0, buf.length - len[0] );
     }
 
     /* Parse stream and bock headers, decompress any blocks found. */
@@ -403,11 +335,8 @@ public class MBC
                 t = get( 32 );
                 retr();
                 imtf();
-                ibwt();
-                derand();
-                crc = 0xFFFFFFFF;
-                emit();
-                if ( ( crc ^ 0xFFFFFFFF ) != t )
+                decode_and_emit();
+                if ( ds.crc != t )
                     bad();
                 c = ( ( c << 1 ) & 0xFFFFFFFF ) ^ ( c >>> 31 ) ^ t;
             }
