@@ -37,17 +37,17 @@ class Decoder
 
     int[] tt = new int[900000];
 
-    int rle_state; /* FSA state */
+    private int rle_state; /* FSA state */
 
-    int rle_crc; /* CRC checksum */
+    private int rle_crc; /* CRC checksum */
 
-    int rle_index; /* IBWT linked list pointer */
+    private int rle_index; /* IBWT linked list pointer */
 
-    int rle_avail; /* available input bytes */
+    private int rle_avail; /* available input bytes */
 
-    int rle_char; /* current character */
+    private int rle_char; /* current character */
 
-    int rle_prev; /* prevoius character */
+    private int rle_prev; /* previous character */
 
     void decode()
     {
