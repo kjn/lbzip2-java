@@ -35,7 +35,7 @@ class Decoder
 
     int[] ftab = new int[256]; /* frequency table used in counting sort */
 
-    int[] tt;
+    int[] tt = new int[900000];
 
     int rle_state; /* FSA state */
 
@@ -74,7 +74,7 @@ class Decoder
          */
         for ( i = 0; i < block_size; i++ )
         {
-            uc = tt[i];
+            uc = tt[i] & 0xFF;
             tt[ftab[uc]] += ( i << 8 );
             ftab[uc]++;
         }
@@ -170,7 +170,8 @@ class Decoder
             case 1:
                 if ( m-- == 0 )
                     break;
-                s = ( s << 8 ) ^ crc_table[( s >> 24 ) ^ ( buf[b++] = (byte) c )];
+                buf[b++] = (byte) c;
+                s = ( s << 8 ) ^ crc_table[( s >>> 24 ) ^ c];
                 if ( c != d )
                     break;
                 if ( a-- == 0 )
@@ -183,7 +184,8 @@ class Decoder
                     rle_state = 2;
                     break;
                 }
-                s = ( s << 8 ) ^ crc_table[( s >> 24 ) ^ ( buf[b++] = (byte) c )];
+                buf[b++] = (byte) c;
+                s = ( s << 8 ) ^ crc_table[( s >>> 24 ) ^ c];
                 if ( c != d )
                     break;
                 if ( a-- == 0 )
@@ -196,7 +198,8 @@ class Decoder
                     rle_state = 3;
                     break;
                 }
-                s = ( s << 8 ) ^ crc_table[( s >> 24 ) ^ ( buf[b++] = (byte) c )];
+                buf[b++] = (byte) c;
+                s = ( s << 8 ) ^ crc_table[( s >>> 24 ) ^ c];
                 if ( c != d )
                     break;
                 if ( a-- == 0 )
@@ -208,13 +211,19 @@ class Decoder
                 {
                     c -= m;
                     while ( m-- != 0 )
-                        s = ( s << 8 ) ^ crc_table[( s >> 24 ) ^ ( buf[b++] = (byte) d )];
+                    {
+                        buf[b++] = (byte) d;
+                        s = ( s << 8 ) ^ crc_table[( s >>> 24 ) ^ d];
+                    }
                     rle_state = 4;
                     break;
                 }
                 m -= c;
                 while ( c-- != 0 )
-                    s = ( s << 8 ) ^ crc_table[( s >> 24 ) ^ ( buf[b++] = (byte) d )];
+                {
+                    buf[b++] = (byte) d;
+                    s = ( s << 8 ) ^ crc_table[( s >>> 24 ) ^ d];
+                }
             case 0:
                 if ( a-- == 0 )
                     break;
@@ -226,7 +235,8 @@ class Decoder
                     rle_state = 5;
                     break;
                 }
-                s = ( s << 8 ) ^ crc_table[( s >> 24 ) ^ ( buf[b++] = (byte) c )];
+                buf[b++] = (byte) c;
+                s = ( s << 8 ) ^ crc_table[( s >>> 24 ) ^ c];
         }
 
         if ( a != -1 && m != -1 )
@@ -243,7 +253,8 @@ class Decoder
                     rle_state = 1;
                     break;
                 }
-                s = ( s << 8 ) ^ crc_table[( s >> 24 ) ^ ( buf[b++] = (byte) c )];
+                buf[b++] = (byte) c;
+                s = ( s << 8 ) ^ crc_table[( s >>> 24 ) ^ c];
                 if ( c != d )
                 {
                     if ( a-- == 0 )
@@ -256,7 +267,8 @@ class Decoder
                         rle_state = 1;
                         break;
                     }
-                    s = ( s << 8 ) ^ crc_table[( s >> 24 ) ^ ( buf[b++] = (byte) c )];
+                    buf[b++] = (byte) c;
+                    s = ( s << 8 ) ^ crc_table[( s >>> 24 ) ^ c];
                     if ( c != d )
                     {
                         if ( a-- == 0 )
@@ -269,7 +281,8 @@ class Decoder
                             rle_state = 1;
                             break;
                         }
-                        s = ( s << 8 ) ^ crc_table[( s >> 24 ) ^ ( buf[b++] = (byte) c )];
+                        buf[b++] = (byte) c;
+                        s = ( s << 8 ) ^ crc_table[( s >>> 24 ) ^ c];
                         if ( c != d )
                         {
                             if ( a-- == 0 )
@@ -282,7 +295,8 @@ class Decoder
                                 rle_state = 1;
                                 break;
                             }
-                            s = ( s << 8 ) ^ crc_table[( s >> 24 ) ^ ( buf[b++] = (byte) c )];
+                            buf[b++] = (byte) c;
+                            s = ( s << 8 ) ^ crc_table[( s >>> 24 ) ^ c];
                             if ( c != d )
                                 continue;
                         }
@@ -297,7 +311,8 @@ class Decoder
                     rle_state = 2;
                     break;
                 }
-                s = ( s << 8 ) ^ crc_table[( s >> 24 ) ^ ( buf[b++] = (byte) c )];
+                buf[b++] = (byte) c;
+                s = ( s << 8 ) ^ crc_table[( s >>> 24 ) ^ c];
                 if ( c != d )
                     continue;
                 if ( a-- == 0 )
@@ -309,7 +324,8 @@ class Decoder
                     rle_state = 3;
                     break;
                 }
-                s = ( s << 8 ) ^ crc_table[( s >> 24 ) ^ ( buf[b++] = (byte) c )];
+                buf[b++] = (byte) c;
+                s = ( s << 8 ) ^ crc_table[( s >>> 24 ) ^ c];
                 if ( c != d )
                     continue;
                 if ( a-- == 0 )
@@ -320,13 +336,19 @@ class Decoder
                 {
                     c -= m;
                     while ( m-- != 0 )
-                        s = ( s << 8 ) ^ crc_table[( s >> 24 ) ^ ( buf[b++] = (byte) d )];
+                    {
+                        buf[b++] = (byte) d;
+                        s = ( s << 8 ) ^ crc_table[( s >>> 24 ) ^ d];
+                    }
                     rle_state = 4;
                     break;
                 }
                 m -= c;
                 while ( c-- != 0 )
-                    s = ( s << 8 ) ^ crc_table[( s >> 24 ) ^ ( buf[b++] = (byte) d )];
+                {
+                    buf[b++] = (byte) d;
+                    s = ( s << 8 ) ^ crc_table[( s >>> 24 ) ^ d];
+                }
                 if ( a-- == 0 )
                     break;
                 p = t[p >> 8];
@@ -336,7 +358,8 @@ class Decoder
                     rle_state = 5;
                     break;
                 }
-                s = ( s << 8 ) ^ crc_table[( s >> 24 ) ^ ( buf[b++] = (byte) c )];
+                buf[b++] = (byte) c;
+                s = ( s << 8 ) ^ crc_table[( s >>> 24 ) ^ c];
             }
         }
 
