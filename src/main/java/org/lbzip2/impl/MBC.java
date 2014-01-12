@@ -41,6 +41,9 @@ public class MBC
     {
         this.in = in;
         this.out = out;
+
+        for ( int t = 0; t < 6; t++ )
+            tree[t] = new PrefixDecoder();
     }
 
     private static void err( String msg )
@@ -81,15 +84,13 @@ public class MBC
 
     private int ns; /* number of selectors (1-32767) */
 
-    private final byte[][] len = new byte[6][259]; /*
-                                                    * code lengths for different trees (element 258 is a sentinel)
-                                                    */
-
     private final byte[] sel = new byte[32767]; /* selector MTF values */
 
     private final MtfDecoder mtf = new MtfDecoder();
 
-    private final PrefixDecoder pd = new PrefixDecoder();
+    private PrefixDecoder pd;
+
+    private final PrefixDecoder[] tree = new PrefixDecoder[6];
 
     private void need( int n )
         throws StreamFormatException, IOException
@@ -199,22 +200,24 @@ public class MBC
     private void trees()
         throws StreamFormatException, IOException
     {
+        byte[] len = new byte[259];
         int t, s;
         for ( t = 0; t < nt; t++ )
         {
-            len[t][0] = (byte) get( 5 );
+            len[0] = (byte) get( 5 );
             for ( s = 0; s < as; s++ )
             {
-                if ( len[t][s] < 1 || len[t][s] > 20 )
+                if ( len[s] < 1 || len[s] > 20 )
                     bad();
                 while ( get( 1 ) != 0 )
                 {
-                    len[t][s] += 1 - 2 * get( 1 );
-                    if ( len[t][s] < 1 || len[t][s] > 20 )
+                    len[s] += 1 - 2 * get( 1 );
+                    if ( len[s] < 1 || len[s] > 20 )
                         bad();
                 }
-                len[t][s + 1] = len[t][s];
+                len[s + 1] = len[s];
             }
+            tree[t].make_tree( len, as );
         }
     }
 
@@ -237,7 +240,7 @@ public class MBC
             while ( i-- > 0 )
                 m[i + 1] = m[i];
             m[0] = t;
-            pd.make_tree( len[t], as );
+            pd = tree[t];
             for ( i = 0; i < 50; i++ )
             {
                 s = get_sym();
