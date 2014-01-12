@@ -241,6 +241,8 @@ public class MBC
                 m[i + 1] = m[i];
             m[0] = t;
             pd = tree[t];
+            if ( pd.error != null )
+                throw new StreamFormatException( pd.error );
             for ( i = 0; i < 50; i++ )
             {
                 s = get_sym();

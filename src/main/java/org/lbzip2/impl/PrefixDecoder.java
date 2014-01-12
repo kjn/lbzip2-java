@@ -98,6 +98,11 @@ class PrefixDecoder
      */
     final short[] perm;
 
+    /**
+     * Message explaining why code book is invalid or {@code null} if it is valid.
+     */
+    String error;
+
     public PrefixDecoder()
     {
         this.start = new short[1 << HUFF_START_WIDTH];
@@ -135,7 +140,6 @@ class PrefixDecoder
      * @throws StreamFormatException if given code set is incomplete or invalid
      */
     void make_tree( byte[] L, int n )
-        throws StreamFormatException
     {
         int[] C; /* code length count; C[0] is a sentinel */
         long[] B; /* left-justified base */
@@ -175,9 +179,10 @@ class PrefixDecoder
         if ( sofar != ( 1 << MAX_CODE_LENGTH ) )
         {
             if ( ult( sofar, 1 << MAX_CODE_LENGTH ) )
-                throw new StreamFormatException( "Incomplete prefix code" );
+                error = "Incomplete prefix code";
             else
-                throw new StreamFormatException( "Oversubscribed prefix code" );
+                error = "Oversubscribed prefix code";
+            return;
         }
 
         /* Create left-justified base table. */
@@ -258,5 +263,7 @@ class PrefixDecoder
         for ( k = MAX_CODE_LENGTH; k > 0; k-- )
             C[k] = C[k - 1];
         assert ( C[0] == 0 );
+
+        error = null;
     }
 }

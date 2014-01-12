@@ -22,8 +22,6 @@ import java.util.Random;
 
 import junit.framework.TestCase;
 
-import org.lbzip2.StreamFormatException;
-
 /**
  * Basic unit test for prefix decoder.
  * 
@@ -48,32 +46,20 @@ public class PrefixDecoderTest
     {
         byte[] lengths = new byte[] { 7, 5, 4, 1 };
 
-        try
-        {
-            PrefixDecoder decoder = new PrefixDecoder();
-            decoder.make_tree( lengths, lengths.length );
-            fail();
-        }
-        catch ( StreamFormatException e )
-        {
-            assertTrue( e.getMessage().toLowerCase().contains( "incomplete" ) );
-        }
+        PrefixDecoder decoder = new PrefixDecoder();
+        decoder.make_tree( lengths, lengths.length );
+        assertNotNull( decoder.error );
+        assertTrue( decoder.error.toLowerCase().contains( "incomplete" ) );
     }
 
     public void testOversubscribedCode()
     {
         byte[] lengths = new byte[] { 3, 1, 3, 1, 3 };
 
-        try
-        {
-            PrefixDecoder decoder = new PrefixDecoder();
-            decoder.make_tree( lengths, lengths.length );
-            fail();
-        }
-        catch ( StreamFormatException e )
-        {
-            assertTrue( e.getMessage().toLowerCase().contains( "oversubscribed" ) );
-        }
+        PrefixDecoder decoder = new PrefixDecoder();
+        decoder.make_tree( lengths, lengths.length );
+        assertNotNull( decoder.error );
+        assertTrue( decoder.error.toLowerCase().contains( "oversubscribed" ) );
     }
 
     /**
@@ -100,16 +86,9 @@ public class PrefixDecoderTest
 
             boolean expectException = kraftSum != 1;
 
-            try
-            {
-                PrefixDecoder decoder = new PrefixDecoder();
-                decoder.make_tree( len, len.length );
-                assertFalse( expectException );
-            }
-            catch ( StreamFormatException e )
-            {
-                assertTrue( expectException );
-            }
+            PrefixDecoder decoder = new PrefixDecoder();
+            decoder.make_tree( len, len.length );
+            assertEquals( expectException, decoder.error != null );
         }
     }
 }
