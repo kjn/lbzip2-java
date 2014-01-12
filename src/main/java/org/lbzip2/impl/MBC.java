@@ -116,6 +116,14 @@ public class MBC
         bk -= n;
     }
 
+    private int take( int n )
+    {
+        assert ( bk >= n );
+        int x = peek( n );
+        dump( n );
+        return x;
+    }
+
     /* Read and return `n' bits from the input stream. `n' must be <= 32. */
     private int get( int n )
         throws StreamFormatException, IOException
@@ -130,7 +138,6 @@ public class MBC
     private short get_sym()
         throws StreamFormatException, IOException
     {
-        need( MAX_CODE_LENGTH );
         int x = pd.start[peek( HUFF_START_WIDTH )];
         int k = x & 0x1F;
         short s;
@@ -158,20 +165,21 @@ public class MBC
     private void retr()
         throws StreamFormatException, IOException
     {
-        ds.rand = get( 1 ) != 0;
-        ds.bwt_idx = get( 24 );
+        need( 1 + 24 + 16 + 16 );
+        ds.rand = take( 1 ) != 0;
+        ds.bwt_idx = take( 24 );
 
         /* Retrieve bitmap. */
         {
             int i, j;
-            short b = (short) get( 16 );
+            short b = (short) take( 16 );
             as = 0;
             mtf.initialize();
             for ( i = 0; i < 16; i++ )
             {
                 if ( b < 0 )
                 {
-                    short s = (short) get( 16 );
+                    short s = (short) take( 16 );
                     for ( j = 0; j < 16; j++ )
                     {
                         if ( s < 0 )
@@ -180,14 +188,17 @@ public class MBC
                     }
                 }
                 b *= 2;
+                need( 3 + 15 + 6 );
             }
+            if ( as == 0 )
+                bad();
             as += 2;
         }
 
-        nt = get( 3 );
+        nt = take( 3 );
         if ( nt < 2 || nt > 6 )
             bad();
-        ns = get( 15 );
+        ns = take( 15 );
 
         /* Retrieve selector MTF values. */
         {
@@ -195,10 +206,11 @@ public class MBC
             for ( g = 0; g < ns; g++ )
             {
                 sel[g] = 0;
-                while ( sel[g] < nt && get( 1 ) != 0 )
+                while ( sel[g] < nt && take( 1 ) != 0 )
                     sel[g]++;
                 if ( sel[g] == nt )
                     bad();
+                need( 5 + 1 + 1 );
             }
             if ( ns > 18001 )
                 ns = 18001;
@@ -207,29 +219,37 @@ public class MBC
         /* Retrieve code lengths. */
         {
             byte[] len = new byte[259];
-            int t, s;
-            for ( t = 0; t < nt; t++ )
+            int t = 0;
+            int s = 0;
+            len[0] = (byte) take( 5 );
+
+            for ( ;; )
             {
-                len[0] = (byte) get( 5 );
-                for ( s = 0; s < as; s++ )
+                if ( take( 1 ) != 0 )
                 {
+                    len[s] += 1 - 2 * take( 1 );
                     if ( len[s] < 1 || len[s] > 20 )
                         bad();
-                    while ( get( 1 ) != 0 )
-                    {
-                        len[s] += 1 - 2 * get( 1 );
-                        if ( len[s] < 1 || len[s] > 20 )
-                            bad();
-                    }
-                    len[s + 1] = len[s];
                 }
-                tree[t].make_tree( len, as );
+                else
+                {
+                    len[s + 1] = len[s];
+                    if ( ++s >= as )
+                    {
+                        tree[t].make_tree( len, as );
+                        if ( ++t >= nt )
+                            break;
+                        s = 0;
+                        len[0] = (byte) take( 5 );
+                    }
+                }
+                need( 1 + MAX_CODE_LENGTH );
             }
         }
 
         /* Retrieve block MTF values and apply IMTF transformation. */
         {
-            int g, i, t;
+            int g = 0, i, t;
             int s, r, h, c;
             ds.block_size = r = h = 0;
             Arrays.fill( ds.ftab, 0 );
@@ -237,42 +257,45 @@ public class MBC
             int[] m = new int[6];
             for ( i = 0; i < 6; i++ )
                 m[i] = i;
-            for ( g = 0; g < ns; g++ )
+            for ( int gp = 0;; gp-- )
             {
-                i = sel[g];
-                t = m[i];
-                while ( i-- > 0 )
-                    m[i + 1] = m[i];
-                m[0] = t;
-                pd = tree[t];
-                if ( pd.error != null )
-                    throw new StreamFormatException( pd.error );
-                for ( i = 0; i < 50; i++ )
+                if ( gp == 0 )
                 {
-                    s = get_sym();
-                    if ( s >= RUN_A )
-                    {
-                        r += 1 << ( h + s - RUN_A );
-                        h++;
-                        if ( r < 0 )
-                            bad();
-                    }
-                    else
-                    {
-                        if ( ds.block_size + r > mbs )
-                            bad();
-                        ds.ftab[c] += r;
-                        while ( r-- != 0 )
-                            ds.tt[ds.block_size++] = c;
-                        if ( s == EOB )
-                            return;
-                        c = mtf.mtf_one( s );
-                        h = 0;
-                        r = 1;
-                    }
+                    if ( g++ >= ns )
+                        bad();
+                    i = sel[g - 1];
+                    t = m[i];
+                    while ( i-- > 0 )
+                        m[i + 1] = m[i];
+                    m[0] = t;
+                    pd = tree[t];
+                    if ( pd.error != null )
+                        throw new StreamFormatException( pd.error );
+                    gp = 50;
                 }
+                s = get_sym();
+                if ( s >= RUN_A )
+                {
+                    r += 1 << ( h + s - RUN_A );
+                    h++;
+                    if ( r < 0 )
+                        bad();
+                }
+                else
+                {
+                    if ( ds.block_size + r > mbs )
+                        bad();
+                    ds.ftab[c] += r;
+                    while ( r-- != 0 )
+                        ds.tt[ds.block_size++] = c;
+                    if ( s == EOB )
+                        return;
+                    c = mtf.mtf_one( s );
+                    h = 0;
+                    r = 1;
+                }
+                need( MAX_CODE_LENGTH );
             }
-            bad();
         }
     }
 
