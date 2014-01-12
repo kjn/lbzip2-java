@@ -269,6 +269,7 @@ public class MBC
     {
         int i, s, r, h, c;
         ds.block_size = r = h = 0;
+        Arrays.fill( ds.ftab, 0 );
         c = mtf.imtf_slide[mtf.imtf_row[0]] & 0xFF;
         for ( i = 0; i < nm; i++ )
         {
@@ -284,6 +285,7 @@ public class MBC
             {
                 if ( ds.block_size + r > mbs )
                     bad();
+                ds.ftab[c] += r;
                 while ( r-- != 0 )
                     ds.tt[ds.block_size++] = c;
                 if ( s == EOB )
@@ -300,9 +302,6 @@ public class MBC
     {
         if ( ds.bwt_idx >= ds.block_size )
             bad();
-        Arrays.fill( ds.ftab, 0 );
-        for ( int i = 0; i < ds.block_size; i++ )
-            ds.ftab[ds.tt[i]]++;
 
         ds.decode();
 
