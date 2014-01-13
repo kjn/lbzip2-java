@@ -92,6 +92,26 @@ public class MBC
 
     private final PrefixDecoder[] tree = new PrefixDecoder[6];
 
+    private short m_b;
+
+    private int m_i;
+
+    private int m_g;
+
+    private final byte[] m_len = new byte[259];
+
+    private int m_t;
+
+    private int m_s;
+
+    private int m_r;
+
+    private int m_h;
+
+    private int m_c;
+
+    private final int[] m_mtf = new int[6];
+
     private void need( int n )
         throws StreamFormatException, IOException
     {
@@ -170,23 +190,22 @@ public class MBC
         ds.bwt_idx = take( 24 );
 
         /* Retrieve bitmap. */
-        int i, j;
-        short b = (short) take( 16 );
+        m_b = (short) take( 16 );
         as = 0;
         mtf.initialize();
-        for ( i = 0; i < 16; i++ )
+        for ( m_i = 0; m_i < 16; m_i++ )
         {
-            if ( b < 0 )
+            if ( m_b < 0 )
             {
                 short s = (short) take( 16 );
-                for ( j = 0; j < 16; j++ )
+                for ( int j = 0; j < 16; j++ )
                 {
                     if ( s < 0 )
-                        mtf.imtf_slide[CMAP_BASE + as++] = (byte) ( 16 * i + j );
+                        mtf.imtf_slide[CMAP_BASE + as++] = (byte) ( 16 * m_i + j );
                     s *= 2;
                 }
             }
-            b *= 2;
+            m_b *= 2;
             need( 3 + 15 + 6 );
         }
         if ( as == 0 )
@@ -198,95 +217,92 @@ public class MBC
             bad();
         ns = take( 15 );
 
-        /* Retrieve selector MTF values. */
-        int g;
-        for ( g = 0; g < ns; g++ )
+        for ( m_g = 0; m_g < ns; m_g++ )
         {
-            sel[g] = 0;
-            while ( sel[g] < nt && take( 1 ) != 0 )
-                sel[g]++;
-            if ( sel[g] == nt )
+            sel[m_g] = 0;
+            while ( sel[m_g] < nt && take( 1 ) != 0 )
+                sel[m_g]++;
+            if ( sel[m_g] == nt )
                 bad();
             need( 5 + 1 + 1 );
         }
         if ( ns > 18001 )
             ns = 18001;
 
-        /* Retrieve code lengths. */
-        byte[] len = new byte[259];
-        int t = 0;
-        int s = 0;
-        len[0] = (byte) take( 5 );
+        m_t = 0;
+        m_s = 0;
+        m_len[0] = (byte) take( 5 );
 
         for ( ;; )
         {
             if ( take( 1 ) != 0 )
             {
-                len[s] += 1 - 2 * take( 1 );
-                if ( len[s] < 1 || len[s] > 20 )
+                m_len[m_s] += 1 - 2 * take( 1 );
+                if ( m_len[m_s] < 1 || m_len[m_s] > 20 )
                     bad();
             }
             else
             {
-                len[s + 1] = len[s];
-                if ( ++s >= as )
+                m_len[m_s + 1] = m_len[m_s];
+                if ( ++m_s >= as )
                 {
-                    tree[t].make_tree( len, as );
-                    if ( ++t >= nt )
+                    tree[m_t].make_tree( m_len, as );
+                    if ( ++m_t >= nt )
                         break;
-                    s = 0;
-                    len[0] = (byte) take( 5 );
+                    m_s = 0;
+                    m_len[0] = (byte) take( 5 );
                 }
             }
             need( 1 + MAX_CODE_LENGTH );
         }
 
         /* Retrieve block MTF values and apply IMTF transformation. */
-        g = 0;
-        int r, h, c;
-        ds.block_size = r = h = 0;
+        m_g = 0;
+        ds.block_size = m_r = m_h = 0;
         Arrays.fill( ds.ftab, 0 );
-        c = mtf.imtf_slide[mtf.imtf_row[0]] & 0xFF;
-        int[] m = new int[6];
-        for ( i = 0; i < 6; i++ )
-            m[i] = i;
-        for ( int gp = 0;; gp-- )
+        m_c = mtf.imtf_slide[mtf.imtf_row[0]] & 0xFF;
+        for ( int i = 0; i < 6; i++ )
+            m_mtf[i] = i;
+        m_i = 0;
+        for ( ;; )
         {
-            if ( gp == 0 )
+            if ( m_i == 0 )
             {
-                if ( g++ >= ns )
+                if ( m_g++ >= ns )
                     bad();
-                i = sel[g - 1];
-                t = m[i];
+                int i = sel[m_g - 1];
+                int t = m_mtf[i];
                 while ( i-- > 0 )
-                    m[i + 1] = m[i];
-                m[0] = t;
+                    m_mtf[i + 1] = m_mtf[i];
+                m_mtf[0] = t;
                 pd = tree[t];
                 if ( pd.error != null )
                     throw new StreamFormatException( pd.error );
-                gp = 50;
+                m_i = 50;
             }
-            s = get_sym();
+            int s = get_sym();
             if ( s >= RUN_A )
             {
-                r += 1 << ( h + s - RUN_A );
-                h++;
-                if ( r < 0 )
+                m_r += 1 << ( m_h + s - RUN_A );
+                m_h++;
+                if ( m_r < 0 )
                     bad();
             }
             else
             {
+                int r = m_r;
                 if ( ds.block_size + r > mbs )
                     bad();
-                ds.ftab[c] += r;
+                ds.ftab[m_c] += r;
                 while ( r-- != 0 )
-                    ds.tt[ds.block_size++] = c;
+                    ds.tt[ds.block_size++] = m_c;
                 if ( s == EOB )
                     return;
-                c = mtf.mtf_one( s );
-                h = 0;
-                r = 1;
+                m_c = mtf.mtf_one( s );
+                m_h = 0;
+                m_r = 1;
             }
+            m_i--;
             need( MAX_CODE_LENGTH );
         }
     }
