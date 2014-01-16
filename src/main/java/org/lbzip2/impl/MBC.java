@@ -112,18 +112,7 @@ public class MBC
 
     private final int[] m_mtf = new int[6];
 
-    private void need( int n )
-        throws StreamFormatException, IOException
-    {
-        while ( bk < n )
-        {
-            long c = in.read();
-            if ( c < 0 )
-                bad();
-            bk += 8;
-            bb += c << ( 64 - bk );
-        }
-    }
+    private int m_need;
 
     private int peek( int n )
     {
@@ -148,7 +137,14 @@ public class MBC
     private int get( int n )
         throws StreamFormatException, IOException
     {
-        need( n );
+        while ( bk < n )
+        {
+            long c = in.read();
+            if ( c < 0 )
+                bad();
+            bk += 8;
+            bb += c << ( 64 - bk );
+        }
         int x = peek( n );
         dump( n );
         return x;
@@ -184,13 +180,31 @@ public class MBC
     private int m_state;
 
     /* Retrieve block. */
-    private Status retr()
+    private Status retr( byte[] buf, int off, int len )
         throws StreamFormatException, IOException
     {
+        while ( bk < m_need && off < len )
+        {
+            bk += 8;
+            bb += ( buf[off++] & 0xFFL ) << ( 64 - bk );
+        }
+        if ( bk < m_need )
+            return MORE;
+
         switch ( m_state )
         {
             default:
-                need( 1 + 24 + 16 + 16 );
+                m_need = 1 + 24 + 16 + 16;
+                while ( bk < m_need && off < len )
+                {
+                    bk += 8;
+                    bb += ( buf[off++] & 0xFFL ) << ( 64 - bk );
+                }
+                if ( bk < m_need )
+                {
+                    m_state = 'I';
+                    return MORE;
+                }
             case 'I':
                 ds.rand = take( 1 ) != 0;
                 ds.bwt_idx = take( 24 );
@@ -201,7 +215,7 @@ public class MBC
                 mtf.initialize();
                 m_i = 0;
             case 'B':
-                for ( ; m_i < 16; m_i++ )
+                while ( m_i < 256 )
                 {
                     if ( m_b < 0 )
                     {
@@ -209,12 +223,23 @@ public class MBC
                         for ( int j = 0; j < 16; j++ )
                         {
                             if ( s < 0 )
-                                mtf.imtf_slide[CMAP_BASE + as++] = (byte) ( 16 * m_i + j );
+                                mtf.imtf_slide[CMAP_BASE + as++] = (byte) ( m_i + j );
                             s *= 2;
                         }
                     }
+                    m_i += 16;
                     m_b *= 2;
-                    need( 3 + 15 + 6 );
+                    m_need = 3 + 15 + 6;
+                    while ( bk < m_need && off < len )
+                    {
+                        bk += 8;
+                        bb += ( buf[off++] & 0xFFL ) << ( 64 - bk );
+                    }
+                    if ( bk < m_need )
+                    {
+                        m_state = 'B';
+                        return MORE;
+                    }
                 }
                 if ( as == 0 )
                     bad();
@@ -227,14 +252,25 @@ public class MBC
 
                 m_g = 0;
             case 'S':
-                for ( ; m_g < ns; m_g++ )
+                for ( ; m_g < ns; )
                 {
                     sel[m_g] = 0;
                     while ( sel[m_g] < nt && take( 1 ) != 0 )
                         sel[m_g]++;
                     if ( sel[m_g] == nt )
                         bad();
-                    need( 5 + 1 + 1 );
+                    m_g++;
+                    m_need = 5 + 1 + 1;
+                    while ( bk < m_need && off < len )
+                    {
+                        bk += 8;
+                        bb += ( buf[off++] & 0xFFL ) << ( 64 - bk );
+                    }
+                    if ( bk < m_need )
+                    {
+                        m_state = 'S';
+                        return MORE;
+                    }
                 }
                 if ( ns > 18001 )
                     ns = 18001;
@@ -263,7 +299,17 @@ public class MBC
                             m_len[0] = (byte) take( 5 );
                         }
                     }
-                    need( 1 + MAX_CODE_LENGTH );
+                    m_need = 1 + MAX_CODE_LENGTH;
+                    while ( bk < m_need && off < len )
+                    {
+                        bk += 8;
+                        bb += ( buf[off++] & 0xFFL ) << ( 64 - bk );
+                    }
+                    if ( bk < m_need )
+                    {
+                        m_state = 'T';
+                        return MORE;
+                    }
                 }
 
                 /* Retrieve block MTF values and apply IMTF transformation. */
@@ -308,13 +354,32 @@ public class MBC
                         while ( r-- != 0 )
                             ds.tt[ds.block_size++] = m_c;
                         if ( s == EOB )
+                        {
+                            // FIXME: this is temporary only
+                            while ( off < len )
+                            {
+                                assert ( bk <= 56 );
+                                bk += 8;
+                                bb += ( buf[off++] & 0xFFL ) << ( 64 - bk );
+                            }
                             return OK;
+                        }
                         m_c = mtf.mtf_one( s );
                         m_h = 0;
                         m_r = 1;
                     }
                     m_i--;
-                    need( MAX_CODE_LENGTH );
+                    m_need = MAX_CODE_LENGTH;
+                    while ( bk < m_need && off < len )
+                    {
+                        bk += 8;
+                        bb += ( buf[off++] & 0xFFL ) << ( 64 - bk );
+                    }
+                    if ( bk < m_need )
+                    {
+                        m_state = 'C';
+                        return MORE;
+                    }
                 }
         }
     }
@@ -360,11 +425,22 @@ public class MBC
                 if ( get( 32 ) != 0x59265359 )
                     bad();
                 t = get( 32 );
-                retr();
+
+                byte[] buf = new byte[1];
+                int s;
+                m_state = 0;
+                do
+                {
+                    s = in.read( buf );
+                    if ( s < 0 )
+                        bad();
+                }
+                while ( retr( buf, 0, s ) == MORE );
+
                 decode_and_emit();
                 if ( ds.crc != t )
                     bad();
-                c = ( ( c << 1 ) & 0xFFFFFFFF ) ^ ( c >>> 31 ) ^ t;
+                c = ( c << 1 ) ^ ( c >>> 31 ) ^ t;
             }
             if ( t != 0x1772 )
                 bad();
