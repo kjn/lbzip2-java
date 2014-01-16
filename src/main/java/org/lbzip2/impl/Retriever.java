@@ -15,9 +15,19 @@
  */
 package org.lbzip2.impl;
 
-import static org.lbzip2.impl.Constants.MAX_ALPHA_SIZE;
-import static org.lbzip2.impl.Constants.MAX_SELECTORS;
-import static org.lbzip2.impl.Constants.MAX_TREES;
+import static org.lbzip2.impl.Constants.MAX_CODE_LENGTH;
+import static org.lbzip2.impl.MtfDecoder.CMAP_BASE;
+import static org.lbzip2.impl.PrefixDecoder.EOB;
+import static org.lbzip2.impl.PrefixDecoder.HUFF_START_WIDTH;
+import static org.lbzip2.impl.PrefixDecoder.RUN_A;
+import static org.lbzip2.impl.Status.MORE;
+import static org.lbzip2.impl.Status.OK;
+import static org.lbzip2.impl.Unsigned.uge;
+
+import java.io.IOException;
+import java.util.Arrays;
+
+import org.lbzip2.StreamFormatException;
 
 /**
  * Retriever parses and decodes <em>bz2</em> streams into internal structures.
@@ -42,14 +52,9 @@ class Retriever
         S_BWT_IDX,
 
         /**
-         * State indicating that retriever was stalled while reading big bucket selector of character map.
+         * State indicating that retriever was stalled while reading character map.
          */
-        S_BITMAP_BIG,
-
-        /**
-         * State indicating that retriever was stalled while reading small bucket selector of character map.
-         */
-        S_BITMAP_SMALL,
+        S_BITMAP,
 
         /**
          * State indicating that retriever was stalled while reading tree selector MTF value.
@@ -67,82 +72,342 @@ class Retriever
         S_PREFIX,
     };
 
+    public Retriever( int mbs )
+    {
+        this.mbs = mbs;
+
+        for ( int t = 0; t < 6; t++ )
+            tree[t] = new PrefixDecoder();
+    }
+
     /**
      * Current state of retriever FSA.
      */
-    State state;
-
-    /**
-     * Coding tree selectors.
-     */
-    byte[] selector;
-
-    /**
-     * Number of prefix trees used.
-     */
-    int num_trees;
-
-    /**
-     * Number of tree selectors present.
-     */
-    int num_selectors;
-
-    /**
-     * Number of distinct prefix codes.
-     */
-    int alpha_size;
-
-    byte[] code_len;
-
-    /**
-     * Current state of inverse MTF FSA.
-     */
-    int[] mtf;
+    private State m_state = State.S_INIT;
 
     /**
      * Coding trees.
      */
-    PrefixDecoder[] tree;
+    private final PrefixDecoder[] tree = new PrefixDecoder[6];
+
+    private PrefixDecoder pd;
 
     /**
-     * Big descriptor of the bitmap.
+     * The bit buffer (left-justified).
      */
-    short big;
+    long bb;
 
     /**
-     * small descriptor of the bitmap.
+     * Number of bits remaining in the bit buffer.
      */
-    short small;
+    int bk;
+
+    /**
+     * Maximal block size (100k-900k in 100k steps).
+     */
+    private final int mbs;
+
+    /**
+     * Alphabet size (number of distinct prefix codes, 3-258).
+     */
+    private int as;
+
+    /**
+     * Number of prefix trees used for current block (2-6).
+     */
+    private int nt;
+
+    /**
+     * Number of selectors used (1-32767).
+     */
+    private int ns;
+
+    /**
+     * Coding tree selector MTF values.
+     */
+    private final byte[] sel = new byte[32767];
+
+    /**
+     * Current state of inverse MTF FSA.
+     */
+    private final MtfDecoder mtf = new MtfDecoder();
 
     /**
      * General purpose index.
      */
-    int j;
-
-    /**
-     * Current tree number.
-     */
-    int t;
+    private int m_i;
 
     /**
      * Current group number.
      */
-    int g;
+    private int m_g;
 
-    MtfDecoder mtf_d;
+    private final byte[] m_len = new byte[259];
 
-    int runChar;
+    /**
+     * Current tree number.
+     */
+    private int m_t;
 
-    int run;
+    private int m_r;
 
-    int shift;
+    private int m_h;
 
-    public Retriever()
+    private int m_c;
+
+    private final int[] m_mtf = new int[6];
+
+    private int m_need;
+
+    private int peek( int n )
     {
-        this.selector = new byte[MAX_SELECTORS];
-        this.code_len = new byte[MAX_ALPHA_SIZE];
-        this.mtf = new int[MAX_TREES];
-        this.tree = new PrefixDecoder[MAX_TREES];
-        this.mtf_d = new MtfDecoder();
+        return (int) ( bb >>> ( 64 - n ) );
+    }
+
+    private void dump( int n )
+    {
+        bb <<= n;
+        bk -= n;
+    }
+
+    private int take( int n )
+    {
+        assert ( bk >= n );
+        int x = peek( n );
+        dump( n );
+        return x;
+    }
+
+    /* Decode a single prefix code. */
+    private short get_sym()
+        throws StreamFormatException, IOException
+    {
+        int x = pd.start[peek( HUFF_START_WIDTH )];
+        int k = x & 0x1F;
+        short s;
+
+        if ( k <= HUFF_START_WIDTH )
+        {
+            /* Use look-up table in average case. */
+            s = (short) ( x >> 5 );
+        }
+        else
+        {
+            /*
+             * Code length exceeds HUFF_START_WIDTH, use canonical prefix decoding algorithm instead of look-up table.
+             */
+            while ( uge( bb, pd.base[k + 1] ) )
+                k++;
+            s = pd.perm[pd.count[k] + (int) ( ( bb - pd.base[k] ) >>> ( 64 - k ) )];
+        }
+
+        dump( k );
+        return s;
+    }
+
+    /* Retrieve block. */
+    Status retr( Decoder ds, byte[] buf, int off, int len )
+        throws StreamFormatException, IOException
+    {
+        while ( bk < m_need && off < len )
+        {
+            bk += 8;
+            bb += ( buf[off++] & 0xFFL ) << ( 64 - bk );
+        }
+        if ( bk < m_need )
+            return MORE;
+
+        switch ( m_state )
+        {
+            default:
+                m_need = 1 + 24 + 16 + 16;
+                while ( bk < m_need && off < len )
+                {
+                    bk += 8;
+                    bb += ( buf[off++] & 0xFFL ) << ( 64 - bk );
+                }
+                if ( bk < m_need )
+                {
+                    m_state = State.S_BWT_IDX;
+                    return MORE;
+                }
+            case S_BWT_IDX:
+                ds.rand = take( 1 ) != 0;
+                ds.bwt_idx = take( 24 );
+
+                /* Retrieve bitmap. */
+                m_r = take( 16 ) << 16;
+                as = 0;
+                mtf.initialize();
+                m_i = 0;
+            case S_BITMAP:
+                while ( m_i < 256 )
+                {
+                    if ( m_r < 0 )
+                    {
+                        int s = take( 16 ) << 16;
+                        for ( int j = 0; j < 16; j++ )
+                        {
+                            if ( s < 0 )
+                                mtf.imtf_slide[CMAP_BASE + as++] = (byte) ( m_i + j );
+                            s *= 2;
+                        }
+                    }
+                    m_i += 16;
+                    m_r *= 2;
+                    m_need = 3 + 15 + 6;
+                    while ( bk < m_need && off < len )
+                    {
+                        bk += 8;
+                        bb += ( buf[off++] & 0xFFL ) << ( 64 - bk );
+                    }
+                    if ( bk < m_need )
+                    {
+                        m_state = State.S_BITMAP;
+                        return MORE;
+                    }
+                }
+                if ( as == 0 )
+                    throw new StreamFormatException( "XXX" );
+                as += 2;
+
+                nt = take( 3 );
+                if ( nt < 2 || nt > 6 )
+                    throw new StreamFormatException( "XXX" );
+                ns = take( 15 );
+
+                m_g = 0;
+            case S_SELECTOR_MTF:
+                for ( ; m_g < ns; )
+                {
+                    sel[m_g] = 0;
+                    while ( sel[m_g] < nt && take( 1 ) != 0 )
+                        sel[m_g]++;
+                    if ( sel[m_g] == nt )
+                        throw new StreamFormatException( "XXX" );
+                    m_g++;
+                    m_need = 5 + 1 + 1;
+                    while ( bk < m_need && off < len )
+                    {
+                        bk += 8;
+                        bb += ( buf[off++] & 0xFFL ) << ( 64 - bk );
+                    }
+                    if ( bk < m_need )
+                    {
+                        m_state = State.S_SELECTOR_MTF;
+                        return MORE;
+                    }
+                }
+                if ( ns > 18001 )
+                    ns = 18001;
+
+                m_t = 0;
+                m_i = 0;
+                m_len[0] = (byte) take( 5 );
+            case S_DELTA_TAG:
+                for ( ;; )
+                {
+                    if ( take( 1 ) != 0 )
+                    {
+                        m_len[m_i] += 1 - 2 * take( 1 );
+                        if ( m_len[m_i] < 1 || m_len[m_i] > 20 )
+                            throw new StreamFormatException( "XXX" );
+                    }
+                    else
+                    {
+                        m_len[m_i + 1] = m_len[m_i];
+                        if ( ++m_i >= as )
+                        {
+                            tree[m_t].make_tree( m_len, as );
+                            if ( ++m_t >= nt )
+                                break;
+                            m_i = 0;
+                            m_len[0] = (byte) take( 5 );
+                        }
+                    }
+                    m_need = 1 + MAX_CODE_LENGTH;
+                    while ( bk < m_need && off < len )
+                    {
+                        bk += 8;
+                        bb += ( buf[off++] & 0xFFL ) << ( 64 - bk );
+                    }
+                    if ( bk < m_need )
+                    {
+                        m_state = State.S_DELTA_TAG;
+                        return MORE;
+                    }
+                }
+
+                /* Retrieve block MTF values and apply IMTF transformation. */
+                m_g = 0;
+                ds.block_size = m_r = m_h = 0;
+                Arrays.fill( ds.ftab, 0 );
+                m_c = mtf.imtf_slide[mtf.imtf_row[0]] & 0xFF;
+                for ( int i = 0; i < 6; i++ )
+                    m_mtf[i] = i;
+                m_i = 0;
+            case S_PREFIX:
+                for ( ;; )
+                {
+                    if ( m_i == 0 )
+                    {
+                        if ( m_g++ >= ns )
+                            throw new StreamFormatException( "XXX" );
+                        int i = sel[m_g - 1];
+                        int t = m_mtf[i];
+                        while ( i-- > 0 )
+                            m_mtf[i + 1] = m_mtf[i];
+                        m_mtf[0] = t;
+                        pd = tree[t];
+                        if ( pd.error != null )
+                            throw new StreamFormatException( pd.error );
+                        m_i = 50;
+                    }
+                    int s = get_sym();
+                    if ( s >= RUN_A )
+                    {
+                        m_r += 1 << ( m_h + s - RUN_A );
+                        m_h++;
+                        if ( m_r < 0 )
+                            throw new StreamFormatException( "XXX" );
+                    }
+                    else
+                    {
+                        int r = m_r;
+                        if ( ds.block_size + r > mbs )
+                            throw new StreamFormatException( "XXX" );
+                        ds.ftab[m_c] += r;
+                        while ( r-- != 0 )
+                            ds.tt[ds.block_size++] = m_c;
+                        if ( s == EOB )
+                        {
+                            // FIXME: this is temporary only
+                            while ( off < len )
+                            {
+                                assert ( bk <= 56 );
+                                bk += 8;
+                                bb += ( buf[off++] & 0xFFL ) << ( 64 - bk );
+                            }
+                            m_state = State.S_INIT;
+                            return OK;
+                        }
+                        m_c = mtf.mtf_one( s );
+                        m_h = 0;
+                        m_r = 1;
+                    }
+                    m_i--;
+                    m_need = MAX_CODE_LENGTH;
+                    while ( bk < m_need && off < len )
+                    {
+                        bk += 8;
+                        bb += ( buf[off++] & 0xFFL ) << ( 64 - bk );
+                    }
+                    if ( bk < m_need )
+                    {
+                        m_state = State.S_PREFIX;
+                        return MORE;
+                    }
+                }
+        }
     }
 }

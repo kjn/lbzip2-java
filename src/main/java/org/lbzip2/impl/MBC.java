@@ -15,19 +15,12 @@
  */
 package org.lbzip2.impl;
 
-import static org.lbzip2.impl.Constants.MAX_CODE_LENGTH;
-import static org.lbzip2.impl.MtfDecoder.CMAP_BASE;
-import static org.lbzip2.impl.PrefixDecoder.EOB;
-import static org.lbzip2.impl.PrefixDecoder.HUFF_START_WIDTH;
-import static org.lbzip2.impl.PrefixDecoder.RUN_A;
 import static org.lbzip2.impl.Status.MORE;
 import static org.lbzip2.impl.Status.OK;
-import static org.lbzip2.impl.Unsigned.uge;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Arrays;
 
 import org.lbzip2.StreamFormatException;
 
@@ -41,9 +34,6 @@ public class MBC
     {
         this.in = in;
         this.out = out;
-
-        for ( int t = 0; t < 6; t++ )
-            tree[t] = new PrefixDecoder();
     }
 
     private static void err( String msg )
@@ -70,49 +60,7 @@ public class MBC
 
     private int bk; /* number of bits remaining in the `bb' bit-buffer */
 
-    private int mbs; /* maximal block size (100k-900k in 100k steps) */
-
     private final Decoder ds = new Decoder();
-
-    private int as; /*
-                     * alphabet size (number of distinct prefix codes, 3-258)
-                     */
-
-    private int nt; /*
-                     * number of prefix trees used for current block (2-6)
-                     */
-
-    private int ns; /* number of selectors (1-32767) */
-
-    private final byte[] sel = new byte[32767]; /* selector MTF values */
-
-    private final MtfDecoder mtf = new MtfDecoder();
-
-    private PrefixDecoder pd;
-
-    private final PrefixDecoder[] tree = new PrefixDecoder[6];
-
-    private short m_b;
-
-    private int m_i;
-
-    private int m_g;
-
-    private final byte[] m_len = new byte[259];
-
-    private int m_t;
-
-    private int m_s;
-
-    private int m_r;
-
-    private int m_h;
-
-    private int m_c;
-
-    private final int[] m_mtf = new int[6];
-
-    private int m_need;
 
     private int peek( int n )
     {
@@ -123,14 +71,6 @@ public class MBC
     {
         bb <<= n;
         bk -= n;
-    }
-
-    private int take( int n )
-    {
-        assert ( bk >= n );
-        int x = peek( n );
-        dump( n );
-        return x;
     }
 
     /* Read and return `n' bits from the input stream. `n' must be <= 32. */
@@ -148,240 +88,6 @@ public class MBC
         int x = peek( n );
         dump( n );
         return x;
-    }
-
-    /* Decode a single prefix code. The algorithm used is naive and slow. */
-    private short get_sym()
-        throws StreamFormatException, IOException
-    {
-        int x = pd.start[peek( HUFF_START_WIDTH )];
-        int k = x & 0x1F;
-        short s;
-
-        if ( k <= HUFF_START_WIDTH )
-        {
-            /* Use look-up table in average case. */
-            s = (short) ( x >> 5 );
-        }
-        else
-        {
-            /*
-             * Code length exceeds HUFF_START_WIDTH, use canonical prefix decoding algorithm instead of look-up table.
-             */
-            while ( uge( bb, pd.base[k + 1] ) )
-                k++;
-            s = pd.perm[pd.count[k] + (int) ( ( bb - pd.base[k] ) >>> ( 64 - k ) )];
-        }
-
-        dump( k );
-        return s;
-    }
-
-    private int m_state;
-
-    /* Retrieve block. */
-    private Status retr( byte[] buf, int off, int len )
-        throws StreamFormatException, IOException
-    {
-        while ( bk < m_need && off < len )
-        {
-            bk += 8;
-            bb += ( buf[off++] & 0xFFL ) << ( 64 - bk );
-        }
-        if ( bk < m_need )
-            return MORE;
-
-        switch ( m_state )
-        {
-            default:
-                m_need = 1 + 24 + 16 + 16;
-                while ( bk < m_need && off < len )
-                {
-                    bk += 8;
-                    bb += ( buf[off++] & 0xFFL ) << ( 64 - bk );
-                }
-                if ( bk < m_need )
-                {
-                    m_state = 'I';
-                    return MORE;
-                }
-            case 'I':
-                ds.rand = take( 1 ) != 0;
-                ds.bwt_idx = take( 24 );
-
-                /* Retrieve bitmap. */
-                m_b = (short) take( 16 );
-                as = 0;
-                mtf.initialize();
-                m_i = 0;
-            case 'B':
-                while ( m_i < 256 )
-                {
-                    if ( m_b < 0 )
-                    {
-                        short s = (short) take( 16 );
-                        for ( int j = 0; j < 16; j++ )
-                        {
-                            if ( s < 0 )
-                                mtf.imtf_slide[CMAP_BASE + as++] = (byte) ( m_i + j );
-                            s *= 2;
-                        }
-                    }
-                    m_i += 16;
-                    m_b *= 2;
-                    m_need = 3 + 15 + 6;
-                    while ( bk < m_need && off < len )
-                    {
-                        bk += 8;
-                        bb += ( buf[off++] & 0xFFL ) << ( 64 - bk );
-                    }
-                    if ( bk < m_need )
-                    {
-                        m_state = 'B';
-                        return MORE;
-                    }
-                }
-                if ( as == 0 )
-                    bad();
-                as += 2;
-
-                nt = take( 3 );
-                if ( nt < 2 || nt > 6 )
-                    bad();
-                ns = take( 15 );
-
-                m_g = 0;
-            case 'S':
-                for ( ; m_g < ns; )
-                {
-                    sel[m_g] = 0;
-                    while ( sel[m_g] < nt && take( 1 ) != 0 )
-                        sel[m_g]++;
-                    if ( sel[m_g] == nt )
-                        bad();
-                    m_g++;
-                    m_need = 5 + 1 + 1;
-                    while ( bk < m_need && off < len )
-                    {
-                        bk += 8;
-                        bb += ( buf[off++] & 0xFFL ) << ( 64 - bk );
-                    }
-                    if ( bk < m_need )
-                    {
-                        m_state = 'S';
-                        return MORE;
-                    }
-                }
-                if ( ns > 18001 )
-                    ns = 18001;
-
-                m_t = 0;
-                m_s = 0;
-                m_len[0] = (byte) take( 5 );
-            case 'T':
-                for ( ;; )
-                {
-                    if ( take( 1 ) != 0 )
-                    {
-                        m_len[m_s] += 1 - 2 * take( 1 );
-                        if ( m_len[m_s] < 1 || m_len[m_s] > 20 )
-                            bad();
-                    }
-                    else
-                    {
-                        m_len[m_s + 1] = m_len[m_s];
-                        if ( ++m_s >= as )
-                        {
-                            tree[m_t].make_tree( m_len, as );
-                            if ( ++m_t >= nt )
-                                break;
-                            m_s = 0;
-                            m_len[0] = (byte) take( 5 );
-                        }
-                    }
-                    m_need = 1 + MAX_CODE_LENGTH;
-                    while ( bk < m_need && off < len )
-                    {
-                        bk += 8;
-                        bb += ( buf[off++] & 0xFFL ) << ( 64 - bk );
-                    }
-                    if ( bk < m_need )
-                    {
-                        m_state = 'T';
-                        return MORE;
-                    }
-                }
-
-                /* Retrieve block MTF values and apply IMTF transformation. */
-                m_g = 0;
-                ds.block_size = m_r = m_h = 0;
-                Arrays.fill( ds.ftab, 0 );
-                m_c = mtf.imtf_slide[mtf.imtf_row[0]] & 0xFF;
-                for ( int i = 0; i < 6; i++ )
-                    m_mtf[i] = i;
-                m_i = 0;
-            case 'C':
-                for ( ;; )
-                {
-                    if ( m_i == 0 )
-                    {
-                        if ( m_g++ >= ns )
-                            bad();
-                        int i = sel[m_g - 1];
-                        int t = m_mtf[i];
-                        while ( i-- > 0 )
-                            m_mtf[i + 1] = m_mtf[i];
-                        m_mtf[0] = t;
-                        pd = tree[t];
-                        if ( pd.error != null )
-                            throw new StreamFormatException( pd.error );
-                        m_i = 50;
-                    }
-                    int s = get_sym();
-                    if ( s >= RUN_A )
-                    {
-                        m_r += 1 << ( m_h + s - RUN_A );
-                        m_h++;
-                        if ( m_r < 0 )
-                            bad();
-                    }
-                    else
-                    {
-                        int r = m_r;
-                        if ( ds.block_size + r > mbs )
-                            bad();
-                        ds.ftab[m_c] += r;
-                        while ( r-- != 0 )
-                            ds.tt[ds.block_size++] = m_c;
-                        if ( s == EOB )
-                        {
-                            // FIXME: this is temporary only
-                            while ( off < len )
-                            {
-                                assert ( bk <= 56 );
-                                bk += 8;
-                                bb += ( buf[off++] & 0xFFL ) << ( 64 - bk );
-                            }
-                            return OK;
-                        }
-                        m_c = mtf.mtf_one( s );
-                        m_h = 0;
-                        m_r = 1;
-                    }
-                    m_i--;
-                    m_need = MAX_CODE_LENGTH;
-                    while ( bk < m_need && off < len )
-                    {
-                        bk += 8;
-                        bb += ( buf[off++] & 0xFFL ) << ( 64 - bk );
-                    }
-                    if ( bk < m_need )
-                    {
-                        m_state = 'C';
-                        return MORE;
-                    }
-                }
-        }
     }
 
     private void decode_and_emit()
@@ -418,24 +124,27 @@ public class MBC
             bad();
         do
         {
+            Retriever r = new Retriever( 100000 * ( t + 1 ) );
             c = 0;
-            mbs = 100000 * ( t + 1 );
             while ( ( t = get( 16 ) ) == 0x3141 )
             {
                 if ( get( 32 ) != 0x59265359 )
                     bad();
                 t = get( 32 );
 
+                r.bb = bb;
+                r.bk = bk;
                 byte[] buf = new byte[1];
                 int s;
-                m_state = 0;
                 do
                 {
                     s = in.read( buf );
                     if ( s < 0 )
                         bad();
                 }
-                while ( retr( buf, 0, s ) == MORE );
+                while ( r.retr( ds, buf, 0, s ) == MORE );
+                bb = r.bb;
+                bk = r.bk;
 
                 decode_and_emit();
                 if ( ds.crc != t )
