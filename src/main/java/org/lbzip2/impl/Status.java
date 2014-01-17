@@ -29,4 +29,9 @@ enum Status
      * More input or output space is required to complete requested operation.
      */
     MORE,
+
+    /**
+     * Operation could not be completed because end of stream was reached.
+     */
+    FINISH,
 }
