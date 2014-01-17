@@ -139,7 +139,7 @@ class PrefixDecoder
      * @param n alphabet size
      * @throws StreamFormatException if given code set is incomplete or invalid
      */
-    void make_tree( byte[] L, int n )
+    void make_tree( int[] L, int n )
     {
         int[] C; /* code length count; C[0] is a sentinel */
         long[] B; /* left-justified base */

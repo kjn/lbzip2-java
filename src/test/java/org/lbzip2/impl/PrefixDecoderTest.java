@@ -44,7 +44,7 @@ public class PrefixDecoderTest
 
     public void testIncompleteCode()
     {
-        byte[] lengths = new byte[] { 7, 5, 4, 1 };
+        int[] lengths = new int[] { 7, 5, 4, 1 };
 
         PrefixDecoder decoder = new PrefixDecoder();
         decoder.make_tree( lengths, lengths.length );
@@ -54,7 +54,7 @@ public class PrefixDecoderTest
 
     public void testOversubscribedCode()
     {
-        byte[] lengths = new byte[] { 3, 1, 3, 1, 3 };
+        int[] lengths = new int[] { 3, 1, 3, 1, 3 };
 
         PrefixDecoder decoder = new PrefixDecoder();
         decoder.make_tree( lengths, lengths.length );
@@ -70,10 +70,10 @@ public class PrefixDecoderTest
         for ( int iter = 0; iter < N_ITER; iter++ )
         {
             int as = random.nextInt( MAX_ALPHA_SIZE - 1 ) + 2;
-            byte[] len = new byte[as];
+            int[] len = new int[as];
 
             for ( int v = 0; v < as; v++ )
-                len[v] = (byte) ( random.nextInt( MAX_CODE_LENGTH ) + 1 );
+                len[v] = random.nextInt( MAX_CODE_LENGTH ) + 1;
 
             double kraftSum = 0;
             for ( int v = 0; v < as; v++ )

@@ -142,7 +142,7 @@ class Retriever
      */
     private int m_g;
 
-    private final byte[] m_len = new byte[259];
+    private final int[] m_len = new int[259];
 
     /**
      * Current tree number.
