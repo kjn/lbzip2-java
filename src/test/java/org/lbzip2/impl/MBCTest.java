@@ -26,7 +26,7 @@ import org.lbzip2.StreamFormatException;
 /**
  * @author Mikolaj Izdebski
  */
-public class LBzip2InputStreamTest
+public class MBCTest
     extends AbstractDecompressorTest
 {
     @Override
@@ -35,12 +35,9 @@ public class LBzip2InputStreamTest
     {
         try
         {
-            LBzip2InputStream zis = new LBzip2InputStream( fis );
             ByteArrayOutputStream out = new ByteArrayOutputStream();
-            int c;
-            while ( ( c = zis.read() ) >= 0 )
-                out.write( c );
-            zis.close();
+            MBC mbc = new MBC( fis, out );
+            mbc.expand();
             if ( md5 == null )
                 fail();
             assertEquals( md5, md5( out.toByteArray() ) );
@@ -51,4 +48,5 @@ public class LBzip2InputStreamTest
                 throw e;
         }
     }
+
 }

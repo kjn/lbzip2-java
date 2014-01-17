@@ -15,20 +15,19 @@
  */
 package org.lbzip2.impl;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-
-import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.security.MessageDigest;
 
 import org.junit.Test;
-import org.lbzip2.StreamFormatException;
 
-public class TestMBC
+/**
+ * @author Mikolaj Izdebski
+ */
+public abstract class AbstractDecompressorTest
 {
-    private static String md5( byte[] arr )
+    public String md5( byte[] arr )
         throws Exception
     {
         MessageDigest md = MessageDigest.getInstance( "MD5" );
@@ -39,23 +38,28 @@ public class TestMBC
         return sb.toString();
     }
 
+    protected abstract void oneFile( InputStream fis, String md5 )
+        throws Exception;
+
     private void oneFile( String name, String md5 )
         throws Exception
     {
+        InputStream fis = new FileInputStream( "test-data/" + name + ".bz2" );
+
         try
         {
-            File bzf = new File( "test-data/" + name + ".bz2" );
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            MBC mbc = new MBC( new FileInputStream( bzf ), out );
-            mbc.expand();
-            if ( md5 == null )
-                fail();
-            assertEquals( md5, md5( out.toByteArray() ) );
+            oneFile( fis, md5 );
         }
-        catch ( StreamFormatException e )
+        finally
         {
-            if ( md5 != null )
+            try
+            {
+                fis.close();
+            }
+            catch ( IOException e )
+            {
                 throw e;
+            }
         }
     }
 
