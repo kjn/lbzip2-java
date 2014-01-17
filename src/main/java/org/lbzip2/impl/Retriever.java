@@ -366,13 +366,6 @@ class Retriever
                             ds.tt[ds.block_size++] = m_c;
                         if ( s == EOB )
                         {
-                            // FIXME: this is temporary only
-                            while ( off < len )
-                            {
-                                assert ( bs.live <= 56 );
-                                bs.live += 8;
-                                bs.buff += ( buf[off++] & 0xFFL ) << ( 64 - bs.live );
-                            }
                             m_state = State.S_INIT;
                             bs.off = off;
                             return OK;
