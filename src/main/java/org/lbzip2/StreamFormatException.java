@@ -15,13 +15,15 @@
  */
 package org.lbzip2;
 
+import java.io.IOException;
+
 /**
  * This exception indicates that compressed <em>bz2</em> stream has errors preventing it from being correctly decoded.
  * 
  * @author Mikolaj Izdebski
  */
 public class StreamFormatException
-    extends Exception
+    extends IOException
 {
     private static final long serialVersionUID = 5802379288030740393L;
 

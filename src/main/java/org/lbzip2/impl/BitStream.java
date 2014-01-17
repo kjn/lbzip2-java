@@ -24,9 +24,15 @@ import static org.lbzip2.impl.Status.OK;
  */
 class BitStream
 {
-    int live;
-
+    /**
+     * The bit buffer (left-justified).
+     */
     long buff;
+
+    /**
+     * Number of bits remaining in the bit buffer.
+     */
+    int live;
 
     byte[] ptr;
 
@@ -59,6 +65,14 @@ class BitStream
     {
         buff <<= n;
         live -= n;
+    }
+
+    int take( int n )
+    {
+        assert ( live >= n );
+        int x = peek( n );
+        dump( n );
+        return x;
     }
 
     void align()

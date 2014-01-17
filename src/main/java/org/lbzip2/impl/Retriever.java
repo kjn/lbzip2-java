@@ -72,12 +72,15 @@ class Retriever
         S_PREFIX,
     };
 
-    public Retriever( int mbs )
+    public Retriever()
     {
-        this.mbs = mbs;
-
         for ( int t = 0; t < 6; t++ )
             tree[t] = new PrefixDecoder();
+    }
+
+    public void setMbs( int mbs )
+    {
+        this.mbs = mbs;
     }
 
     /**
@@ -93,19 +96,9 @@ class Retriever
     private PrefixDecoder pd;
 
     /**
-     * The bit buffer (left-justified).
-     */
-    long bb;
-
-    /**
-     * Number of bits remaining in the bit buffer.
-     */
-    int bk;
-
-    /**
      * Maximal block size (100k-900k in 100k steps).
      */
-    private final int mbs;
+    private int mbs;
 
     /**
      * Alphabet size (number of distinct prefix codes, 3-258).
@@ -159,30 +152,11 @@ class Retriever
 
     private int m_need;
 
-    private int peek( int n )
-    {
-        return (int) ( bb >>> ( 64 - n ) );
-    }
-
-    private void dump( int n )
-    {
-        bb <<= n;
-        bk -= n;
-    }
-
-    private int take( int n )
-    {
-        assert ( bk >= n );
-        int x = peek( n );
-        dump( n );
-        return x;
-    }
-
     /* Decode a single prefix code. */
-    private short get_sym()
+    private short get_sym( BitStream bs )
         throws StreamFormatException, IOException
     {
-        int x = pd.start[peek( HUFF_START_WIDTH )];
+        int x = pd.start[bs.peek( HUFF_START_WIDTH )];
         int k = x & 0x1F;
         short s;
 
@@ -196,47 +170,55 @@ class Retriever
             /*
              * Code length exceeds HUFF_START_WIDTH, use canonical prefix decoding algorithm instead of look-up table.
              */
-            while ( uge( bb, pd.base[k + 1] ) )
+            while ( uge( bs.buff, pd.base[k + 1] ) )
                 k++;
-            s = pd.perm[pd.count[k] + (int) ( ( bb - pd.base[k] ) >>> ( 64 - k ) )];
+            s = pd.perm[pd.count[k] + (int) ( ( bs.buff - pd.base[k] ) >>> ( 64 - k ) )];
         }
 
-        dump( k );
+        bs.dump( k );
         return s;
     }
 
     /* Retrieve block. */
-    Status retr( Decoder ds, byte[] buf, int off, int len )
+    Status retr( Decoder ds, BitStream bs )
         throws StreamFormatException, IOException
     {
-        while ( bk < m_need && off < len )
+        int off = bs.off;
+        final int len = bs.len;
+        final byte[] buf = bs.ptr;
+
+        while ( bs.live < m_need && off < len )
         {
-            bk += 8;
-            bb += ( buf[off++] & 0xFFL ) << ( 64 - bk );
+            bs.live += 8;
+            bs.buff += ( buf[off++] & 0xFFL ) << ( 64 - bs.live );
         }
-        if ( bk < m_need )
+        if ( bs.live < m_need )
+        {
+            bs.off = off;
             return MORE;
+        }
 
         switch ( m_state )
         {
             default:
                 m_need = 1 + 24 + 16 + 16;
-                while ( bk < m_need && off < len )
+                while ( bs.live < m_need && off < len )
                 {
-                    bk += 8;
-                    bb += ( buf[off++] & 0xFFL ) << ( 64 - bk );
+                    bs.live += 8;
+                    bs.buff += ( buf[off++] & 0xFFL ) << ( 64 - bs.live );
                 }
-                if ( bk < m_need )
+                if ( bs.live < m_need )
                 {
                     m_state = State.S_BWT_IDX;
+                    bs.off = off;
                     return MORE;
                 }
             case S_BWT_IDX:
-                ds.rand = take( 1 ) != 0;
-                ds.bwt_idx = take( 24 );
+                ds.rand = bs.take( 1 ) != 0;
+                ds.bwt_idx = bs.take( 24 );
 
                 /* Retrieve bitmap. */
-                m_r = take( 16 ) << 16;
+                m_r = bs.take( 16 ) << 16;
                 as = 0;
                 mtf.initialize();
                 m_i = 0;
@@ -245,7 +227,7 @@ class Retriever
                 {
                     if ( m_r < 0 )
                     {
-                        int s = take( 16 ) << 16;
+                        int s = bs.take( 16 ) << 16;
                         for ( int j = 0; j < 16; j++ )
                         {
                             if ( s < 0 )
@@ -256,14 +238,15 @@ class Retriever
                     m_i += 16;
                     m_r *= 2;
                     m_need = 3 + 15 + 6;
-                    while ( bk < m_need && off < len )
+                    while ( bs.live < m_need && off < len )
                     {
-                        bk += 8;
-                        bb += ( buf[off++] & 0xFFL ) << ( 64 - bk );
+                        bs.live += 8;
+                        bs.buff += ( buf[off++] & 0xFFL ) << ( 64 - bs.live );
                     }
-                    if ( bk < m_need )
+                    if ( bs.live < m_need )
                     {
                         m_state = State.S_BITMAP;
+                        bs.off = off;
                         return MORE;
                     }
                 }
@@ -271,30 +254,31 @@ class Retriever
                     throw new StreamFormatException( "XXX" );
                 as += 2;
 
-                nt = take( 3 );
+                nt = bs.take( 3 );
                 if ( nt < 2 || nt > 6 )
                     throw new StreamFormatException( "XXX" );
-                ns = take( 15 );
+                ns = bs.take( 15 );
 
                 m_g = 0;
             case S_SELECTOR_MTF:
                 for ( ; m_g < ns; )
                 {
                     sel[m_g] = 0;
-                    while ( sel[m_g] < nt && take( 1 ) != 0 )
+                    while ( sel[m_g] < nt && bs.take( 1 ) != 0 )
                         sel[m_g]++;
                     if ( sel[m_g] == nt )
                         throw new StreamFormatException( "XXX" );
                     m_g++;
                     m_need = 5 + 1 + 1;
-                    while ( bk < m_need && off < len )
+                    while ( bs.live < m_need && off < len )
                     {
-                        bk += 8;
-                        bb += ( buf[off++] & 0xFFL ) << ( 64 - bk );
+                        bs.live += 8;
+                        bs.buff += ( buf[off++] & 0xFFL ) << ( 64 - bs.live );
                     }
-                    if ( bk < m_need )
+                    if ( bs.live < m_need )
                     {
                         m_state = State.S_SELECTOR_MTF;
+                        bs.off = off;
                         return MORE;
                     }
                 }
@@ -303,13 +287,13 @@ class Retriever
 
                 m_t = 0;
                 m_i = 0;
-                m_len[0] = (byte) take( 5 );
+                m_len[0] = (byte) bs.take( 5 );
             case S_DELTA_TAG:
                 for ( ;; )
                 {
-                    if ( take( 1 ) != 0 )
+                    if ( bs.take( 1 ) != 0 )
                     {
-                        m_len[m_i] += 1 - 2 * take( 1 );
+                        m_len[m_i] += 1 - 2 * bs.take( 1 );
                         if ( m_len[m_i] < 1 || m_len[m_i] > 20 )
                             throw new StreamFormatException( "XXX" );
                     }
@@ -322,18 +306,19 @@ class Retriever
                             if ( ++m_t >= nt )
                                 break;
                             m_i = 0;
-                            m_len[0] = (byte) take( 5 );
+                            m_len[0] = (byte) bs.take( 5 );
                         }
                     }
                     m_need = 1 + MAX_CODE_LENGTH;
-                    while ( bk < m_need && off < len )
+                    while ( bs.live < m_need && off < len )
                     {
-                        bk += 8;
-                        bb += ( buf[off++] & 0xFFL ) << ( 64 - bk );
+                        bs.live += 8;
+                        bs.buff += ( buf[off++] & 0xFFL ) << ( 64 - bs.live );
                     }
-                    if ( bk < m_need )
+                    if ( bs.live < m_need )
                     {
                         m_state = State.S_DELTA_TAG;
+                        bs.off = off;
                         return MORE;
                     }
                 }
@@ -363,7 +348,7 @@ class Retriever
                             throw new StreamFormatException( pd.error );
                         m_i = 50;
                     }
-                    int s = get_sym();
+                    int s = get_sym( bs );
                     if ( s >= RUN_A )
                     {
                         m_r += 1 << ( m_h + s - RUN_A );
@@ -384,11 +369,12 @@ class Retriever
                             // FIXME: this is temporary only
                             while ( off < len )
                             {
-                                assert ( bk <= 56 );
-                                bk += 8;
-                                bb += ( buf[off++] & 0xFFL ) << ( 64 - bk );
+                                assert ( bs.live <= 56 );
+                                bs.live += 8;
+                                bs.buff += ( buf[off++] & 0xFFL ) << ( 64 - bs.live );
                             }
                             m_state = State.S_INIT;
+                            bs.off = off;
                             return OK;
                         }
                         m_c = mtf.mtf_one( s );
@@ -397,14 +383,15 @@ class Retriever
                     }
                     m_i--;
                     m_need = MAX_CODE_LENGTH;
-                    while ( bk < m_need && off < len )
+                    while ( bs.live < m_need && off < len )
                     {
-                        bk += 8;
-                        bb += ( buf[off++] & 0xFFL ) << ( 64 - bk );
+                        bs.live += 8;
+                        bs.buff += ( buf[off++] & 0xFFL ) << ( 64 - bs.live );
                     }
-                    if ( bk < m_need )
+                    if ( bs.live < m_need )
                     {
                         m_state = State.S_PREFIX;
+                        bs.off = off;
                         return MORE;
                     }
                 }

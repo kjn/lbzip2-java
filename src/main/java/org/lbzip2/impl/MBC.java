@@ -15,6 +15,7 @@
  */
 package org.lbzip2.impl;
 
+import static org.lbzip2.impl.Status.FINISH;
 import static org.lbzip2.impl.Status.MORE;
 import static org.lbzip2.impl.Status.OK;
 
@@ -30,10 +31,16 @@ public class MBC
 
     private final OutputStream out;
 
+    private final BitStream bs = new BitStream();
+
     public MBC( InputStream in, OutputStream out )
     {
         this.in = in;
         this.out = out;
+
+        bs.ptr = new byte[1];
+        bs.off = 1;
+        bs.len = 1;
     }
 
     private static void err( String msg )
@@ -56,37 +63,24 @@ public class MBC
         err( "Data error" );
     }
 
-    private long bb; /* the bit-buffer (left-justified) */
-
-    private int bk; /* number of bits remaining in the `bb' bit-buffer */
-
     private final Decoder ds = new Decoder();
 
-    private int peek( int n )
-    {
-        return (int) ( bb >>> ( 64 - n ) );
-    }
-
-    private void dump( int n )
-    {
-        bb <<= n;
-        bk -= n;
-    }
-
-    /* Read and return `n' bits from the input stream. `n' must be <= 32. */
     private int get( int n )
-        throws StreamFormatException, IOException
+        throws IOException
     {
-        while ( bk < n )
+        Status s;
+        while ( ( s = bs.need( n ) ) == MORE )
         {
-            long c = in.read();
-            if ( c < 0 )
-                bad();
-            bk += 8;
-            bb += c << ( 64 - bk );
+            if ( in.read( bs.ptr ) < 0 )
+                bs.eof = true;
+            else
+                bs.off = 0;
         }
-        int x = peek( n );
-        dump( n );
+        if ( s == FINISH )
+            bad();
+
+        int x = bs.peek( n );
+        bs.dump( n );
         return x;
     }
 
@@ -124,7 +118,8 @@ public class MBC
             bad();
         do
         {
-            Retriever r = new Retriever( 100000 * ( t + 1 ) );
+            Retriever r = new Retriever();
+            r.setMbs( 100000 * ( t + 1 ) );
             c = 0;
             while ( ( t = get( 16 ) ) == 0x3141 )
             {
@@ -132,19 +127,16 @@ public class MBC
                     bad();
                 t = get( 32 );
 
-                r.bb = bb;
-                r.bk = bk;
-                byte[] buf = new byte[1];
-                int s;
-                do
+                Status s;
+                while ( ( s = r.retr( ds, bs ) ) == MORE )
                 {
-                    s = in.read( buf );
-                    if ( s < 0 )
-                        bad();
+                    if ( in.read( bs.ptr ) < 0 )
+                        bs.eof = true;
+                    else
+                        bs.off = 0;
                 }
-                while ( r.retr( ds, buf, 0, s ) == MORE );
-                bb = r.bb;
-                bk = r.bk;
+                if ( s == FINISH )
+                    bad();
 
                 decode_and_emit();
                 if ( ds.crc != t )
@@ -157,7 +149,7 @@ public class MBC
                 bad();
             if ( get( 32 ) != c )
                 bad();
-            bk = 0;
+            bs.align();
         }
         while ( read() == 0x42 && read() == 0x5A && read() == 0x68 && ( t = get( 8 ) - 0x31 ) < 9 );
     }
