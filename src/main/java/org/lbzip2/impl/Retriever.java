@@ -251,13 +251,15 @@ class Retriever
                     }
                 }
                 if ( as == 0 )
-                    throw new StreamFormatException( "XXX" );
+                    throw new StreamFormatException( "empty source alphabet" );
                 as += 2;
 
                 nt = bs.take( 3 );
                 if ( nt < 2 || nt > 6 )
-                    throw new StreamFormatException( "XXX" );
+                    throw new StreamFormatException( "bad number of trees" );
                 ns = bs.take( 15 );
+                if ( ns == 0 )
+                    throw new StreamFormatException( "no coding groups" );
 
                 m_g = 0;
             case S_SELECTOR_MTF:
@@ -267,7 +269,7 @@ class Retriever
                     while ( sel[m_g] < nt && bs.take( 1 ) != 0 )
                         sel[m_g]++;
                     if ( sel[m_g] == nt )
-                        throw new StreamFormatException( "XXX" );
+                        throw new StreamFormatException( "invalid selector" );
                     m_g++;
                     m_need = 5 + 1 + 1;
                     while ( bs.live < m_need && off < len )
@@ -295,7 +297,7 @@ class Retriever
                     {
                         m_len[m_i] += 1 - 2 * bs.take( 1 );
                         if ( m_len[m_i] < 1 || m_len[m_i] > 20 )
-                            throw new StreamFormatException( "XXX" );
+                            throw new StreamFormatException( "invalid delta code" );
                     }
                     else
                     {
@@ -337,7 +339,7 @@ class Retriever
                     if ( m_i == 0 )
                     {
                         if ( m_g++ >= ns )
-                            throw new StreamFormatException( "XXX" );
+                            throw new StreamFormatException( "unterminated block" );
                         int i = sel[m_g - 1];
                         int t = m_mtf[i];
                         while ( i-- > 0 )
@@ -354,13 +356,13 @@ class Retriever
                         m_r += 1 << ( m_h + s - RUN_A );
                         m_h++;
                         if ( m_r < 0 )
-                            throw new StreamFormatException( "XXX" );
+                            throw new StreamFormatException( "invalid zero run length" );
                     }
                     else
                     {
                         int r = m_r;
                         if ( ds.block_size + r > mbs )
-                            throw new StreamFormatException( "XXX" );
+                            throw new StreamFormatException( "block overflow" );
                         ds.ftab[m_c] += r;
                         while ( r-- != 0 )
                             ds.tt[ds.block_size++] = m_c;
