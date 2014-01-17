@@ -82,6 +82,7 @@ public abstract class AbstractDecompressorTest
         oneFile( "incomp-2", "8bab041a19e4cf0c244da418b15676f1" );
         oneFile( "load0", null );
         oneFile( "overrun", null );
+        oneFile( "overrun2", null );
         oneFile( "rand", "2debfdcf79f03e4a65a667d21ef9de14" );
         oneFile( "repet", "bf3335ea7e712d847d189b087e45c54b" );
         oneFile( "trash", "2debfdcf79f03e4a65a667d21ef9de14" );
