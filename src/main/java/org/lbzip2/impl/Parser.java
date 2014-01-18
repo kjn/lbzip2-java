@@ -58,8 +58,6 @@ class Parser
 
     int bs100k;
 
-    int prev_bs100k;
-
     int stored_crc;
 
     int computed_crc;
@@ -67,8 +65,7 @@ class Parser
     public Parser( int my_bs100k )
     {
         state = BLOCK_MAGIC_1;
-        prev_bs100k = my_bs100k;
-        bs100k = -1;
+        bs100k = my_bs100k;
         computed_crc = 0;
     }
 
@@ -113,8 +110,7 @@ class Parser
                         garbage[0] = 32;
                         return FINISH;
                     }
-                    prev_bs100k = word & 0xF;
-                    bs100k = -1;
+                    bs100k = word & 0xF;
                     state = BLOCK_MAGIC_1;
                     continue;
 
@@ -148,9 +144,8 @@ class Parser
 
                 case BLOCK_CRC_2:
                     hd.crc = ( stored_crc << 16 ) | word;
-                    hd.bs100k = prev_bs100k;
+                    hd.bs100k = bs100k;
                     computed_crc = ( computed_crc << 1 ) ^ ( computed_crc >> 31 ) ^ hd.crc;
-                    prev_bs100k = bs100k;
                     state = BLOCK_MAGIC_1;
                     return OK;
 
