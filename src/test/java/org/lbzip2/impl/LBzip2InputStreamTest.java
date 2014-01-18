@@ -37,9 +37,10 @@ public class LBzip2InputStreamTest
         {
             LBzip2InputStream zis = new LBzip2InputStream( fis );
             ByteArrayOutputStream out = new ByteArrayOutputStream();
-            int c;
-            while ( ( c = zis.read() ) >= 0 )
-                out.write( c );
+            byte[] buf = new byte[4096];
+            int r;
+            while ( ( r = zis.read( buf ) ) != -1 )
+                out.write( buf, 0, r );
             zis.close();
             if ( md5 == null )
                 fail();
