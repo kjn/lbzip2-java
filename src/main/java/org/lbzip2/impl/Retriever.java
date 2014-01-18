@@ -80,6 +80,8 @@ class Retriever
 
     public void setMbs( int mbs )
     {
+        if ( mbs <= 0 || mbs > 900000 )
+            throw new IllegalStateException();
         this.mbs = mbs;
     }
 
