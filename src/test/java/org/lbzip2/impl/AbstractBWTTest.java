@@ -49,4 +49,41 @@ public abstract class AbstractBWTTest
 
         assertEquals( 4, idx );
     }
+
+    @Test
+    public void testFibonacciWords()
+    {
+        int[] f2 = new int[] { 'A' };
+        int[] f1 = new int[] { 'A', 'B' };
+
+        int x2 = 0;
+        int x1 = 1;
+        int d = 0;
+
+        for ( int j = 2; j <= 20; j++ )
+        {
+            int[] f0 = new int[f1.length + f2.length];
+            System.arraycopy( f1, 0, f0, 0, f1.length );
+            System.arraycopy( f2, 0, f0, f1.length, f2.length );
+
+            int x0 = x2 + x1;
+
+            int[] P = new int[f0.length + 1];
+            System.arraycopy( f0, 0, P, 0, f0.length );
+            int idx = bwt.transform( P, f0.length );
+            assertEquals( x0 + d, idx );
+
+            for ( int i = 0; i < f2.length; i++ )
+                assertEquals( "i=" + i, 'B', P[i] );
+            for ( int i = f2.length; i < f0.length; i++ )
+                assertEquals( "i=" + i, 'A', P[i] );
+
+            f2 = f1;
+            f1 = f0;
+
+            x2 = x1;
+            x1 = x0;
+            d ^= -1;
+        }
+    }
 }
