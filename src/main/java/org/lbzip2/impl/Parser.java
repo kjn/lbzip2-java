@@ -145,7 +145,7 @@ class Parser
                 case BLOCK_CRC_2:
                     hd.crc = ( stored_crc << 16 ) | word;
                     hd.bs100k = bs100k;
-                    computed_crc = ( computed_crc << 1 ) ^ ( computed_crc >> 31 ) ^ hd.crc;
+                    computed_crc = ( computed_crc << 1 ) ^ ( computed_crc >>> 31 ) ^ hd.crc;
                     state = BLOCK_MAGIC_1;
                     return OK;
 
