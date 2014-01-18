@@ -33,11 +33,8 @@ public abstract class AbstractPrefixCoderTest
         this.coder = coder;
     }
 
-    @Test
-    public void basicTest()
+    protected int[] doTheTest( long[] P )
     {
-        // Sorted version of: 7, 5, 4, 1, 6, 8, 9
-        long[] P = new long[] { 9, 8, 7, 6, 5, 4, 1 };
         int n = P.length;
         int[] C = new int[22];
 
@@ -48,6 +45,17 @@ public abstract class AbstractPrefixCoderTest
 
         // C[0] is a sentinel and always must be 0
         assertEquals( 0, C[0] );
+
+        return C;
+    }
+
+    @Test
+    public void basicTest()
+    {
+        // Sorted version of: 7, 5, 4, 1, 6, 8, 9
+        long[] P = new long[] { 9, 8, 7, 6, 5, 4, 1 };
+
+        int[] C = doTheTest( P );
 
         // Let's build Huffman tree by hand:
         // 7, 5, 4, 1, 6, 8, 9
