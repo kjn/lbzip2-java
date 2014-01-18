@@ -123,12 +123,33 @@ class PackageMerge
         assert ( iP == 0 );
         assert ( szP == n - 1 );
 
+        for ( k = 0; k < VECTOR_SIZE; k++ )
+            W[k] = 0;
+
+        while ( szP > 0 )
+        {
+            jP = szP & 1;
+            szP >>= 1;
+
+            if ( jP != 0 )
+                for ( k = 0; k < VECTOR_SIZE; k++ )
+                    W[k] += P[0][k];
+
+            for ( jL = 0; jL < szP; jL++ )
+            {
+                for ( k = 0; k < VECTOR_SIZE; k++ )
+                    P[jL][k] = P[jP][k] + P[jP + 1][k];
+                jP += 2;
+            }
+        }
+
+        int cum = 0;
         k = VECTOR_SIZE * SYMBOLS_PER_WORD;
         for ( i = VECTOR_SIZE; i-- != 0; )
         {
-            dw = P[szP - 1][i];
+            dw = W[i];
             for ( d = SYMBOLS_PER_WORD * BITS_PER_SYMBOL; d != 0; )
-                C[k--] = (int) ( dw >>> ( d -= BITS_PER_SYMBOL ) ) & 0x1ff;
+                cum += C[k--] = ( (int) ( dw >> ( d -= BITS_PER_SYMBOL ) ) & 0x1ff ) - cum;
         }
         C[0] = 0;
     }
