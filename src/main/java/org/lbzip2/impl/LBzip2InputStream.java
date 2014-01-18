@@ -89,6 +89,7 @@ public class LBzip2InputStream
                         throw new StreamFormatException( "Invalid block CRC" );
                 }
                 len = buf_sz[0];
+                off += origLen - len;
             }
             else
             {
