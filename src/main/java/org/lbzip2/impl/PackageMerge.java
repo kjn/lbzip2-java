@@ -15,8 +15,9 @@
  */
 package org.lbzip2.impl;
 
-import static org.lbzip2.impl.Constants.MAX_ALPHA_SIZE;
 import static org.lbzip2.impl.Constants.MAX_CODE_LENGTH;
+
+import java.util.Arrays;
 
 /**
  * This class is an implementation of the Package-Merge algorithm for finding an optimal length-limited prefix-free code
@@ -27,130 +28,65 @@ import static org.lbzip2.impl.Constants.MAX_CODE_LENGTH;
 class PackageMerge
     implements PrefixCoder
 {
-    /**
-     * {@code ceil(log2(MAX_ALPHA_SIZE))}
-     */
-    private static final int BITS_PER_SYMBOL = 9;
+    private final byte[][] T = new byte[MAX_CODE_LENGTH + 1][];
 
-    /**
-     * {@code floor(64 / BITS_PER_SYMBOL)}
-     */
-    private static final int SYMBOLS_PER_WORD = 7;
+    private final long[] U = new long[MAX_CODE_LENGTH + 1];
 
-    /**
-     * {@code ceil(MAX_CODE_LENGTH / SYMBOLS_PER_WORD)}
-     */
-    private static final int VECTOR_SIZE = 3;
+    private final long[] V = new long[MAX_CODE_LENGTH + 1];
 
-    /**
-     * It can be easily proved by induction that number of elements stored in the queue is always stricly less elements
-     * than alphabet size.
-     */
-    private static final int QUEUE_SIZE = MAX_ALPHA_SIZE - 1;
-
-    /**
-     * Internal node weights.
-     */
-    private final long[] W = new long[2 * QUEUE_SIZE];
-
-    private final long[][] P = new long[2 * QUEUE_SIZE][VECTOR_SIZE];
-
-    public void build_tree( int[] C, long[] Pr, int n )
+    public PackageMerge()
     {
-        int x; /* number of unprocessed singleton nodes */
-        int i; /* general purpose index */
-        int k; /* vector index */
-        int d; /* current node depth */
-        int jP; /* current index in queue P */
-        int jL; /* current index in queue L */
-        int szP; /* current size of queue P */
-        int iP; /* current offset of head of queue P */
-        long dw; /* symbol weight at current depth */
+        for ( int k = 1; k <= MAX_CODE_LENGTH; k++ )
+            T[k] = new byte[k];
+    }
 
-        iP = MAX_CODE_LENGTH % 2 * ( MAX_ALPHA_SIZE - 1 );
-        szP = 0;
+    private void package_merge( int[] C, long[] P, int n, int m )
+    {
+        U[0] = Long.MAX_VALUE;
 
-        d = VECTOR_SIZE - 1;
-        dw = 1L << ( MAX_CODE_LENGTH % SYMBOLS_PER_WORD * BITS_PER_SYMBOL );
-        for ( ;; )
+        for ( int k = 1; k <= m; k++ )
         {
-            dw >>>= BITS_PER_SYMBOL;
-            int dwm = ( dw == 0 ) ? -1 : 0;
-            d += dwm;
-            if ( d + 1 == 0 )
-                break;
-            dw += dwm & ( 1L << ( ( SYMBOLS_PER_WORD - 1 ) * BITS_PER_SYMBOL ) );
-
-            x = n;
-            jP = iP;
-            iP ^= MAX_ALPHA_SIZE - 1;
-            jL = iP;
-
-            for ( jL = iP; x + szP > 1; jL++ )
-            {
-                if ( szP == 0 || ( x > 1 && Pr[x - 2] < W[jP] ) )
-                {
-                    W[jL] = Pr[x - 1] + Pr[x - 2];
-                    for ( k = 0; k < VECTOR_SIZE; k++ )
-                        P[jL][k] = 0;
-                    P[jL][d] += 2 * dw;
-                    x -= 2;
-                }
-                else if ( x == 0 || ( szP > 1 && W[jP + 1] <= Pr[x - 1] ) )
-                {
-                    W[jL] = W[jP] + W[jP + 1];
-                    for ( k = 0; k < VECTOR_SIZE; k++ )
-                        P[jL][k] = P[jP][k] + P[jP + 1][k];
-                    jP += 2;
-                    szP -= 2;
-                }
-                else
-                {
-                    W[jL] = W[jP] + Pr[x - 1];
-                    for ( k = 0; k < VECTOR_SIZE; k++ )
-                        P[jL][k] = P[jP][k];
-                    P[jL][d] += dw;
-                    jP++;
-                    x--;
-                    szP--;
-                }
-            }
-
-            szP = jL - iP;
-            assert ( szP >= n / 2 );
-            assert ( szP < n );
+            Arrays.fill( T[k], (byte) 0 );
+            T[k][0] = (byte) 2;
+            U[k] = P[n - 1] + P[n - 2];
+            V[k] = P[n - 2];
         }
-        assert ( iP == 0 );
-        assert ( szP == n - 1 );
 
-        for ( k = 0; k < VECTOR_SIZE; k++ )
-            W[k] = 0;
-
-        while ( szP > 0 )
+        for ( int i = 2; i < n; i++ )
         {
-            jP = szP & 1;
-            szP >>= 1;
-
-            if ( jP != 0 )
-                for ( k = 0; k < VECTOR_SIZE; k++ )
-                    W[k] += P[0][k];
-
-            for ( jL = 0; jL < szP; jL++ )
+            C[0] = m;
+            C[1] = m;
+            for ( int j = 1; j >= 0; j-- )
             {
-                for ( k = 0; k < VECTOR_SIZE; k++ )
-                    P[jL][k] = P[jP][k] + P[jP + 1][k];
-                jP += 2;
+                int k = C[j];
+                int t = n - T[k][0] - 1;
+                if ( t >= 0 && U[k - 1] > P[t] )
+                {
+                    T[k][0]++;
+                    U[k] = V[k] + P[t];
+                    V[k] = P[t];
+                }
+                else if ( k != 1 )
+                {
+                    System.arraycopy( T[k - 1], 0, T[k], 1, k - 1 );
+                    U[k] = V[k] + U[k - 1];
+                    V[k] = U[k - 1];
+                    k--;
+                    C[j++] = k;
+                    C[j++] = k;
+                }
             }
         }
 
-        int cum = 0;
-        k = VECTOR_SIZE * SYMBOLS_PER_WORD;
-        for ( i = VECTOR_SIZE; i-- != 0; )
-        {
-            dw = W[i];
-            for ( d = SYMBOLS_PER_WORD * BITS_PER_SYMBOL; d != 0; )
-                cum += C[k--] = ( (int) ( dw >> ( d -= BITS_PER_SYMBOL ) ) & 0x1ff ) - cum;
-        }
         C[0] = 0;
+        for ( int k = 1; k < m; k++ )
+            C[k] = T[m][k - 1] - T[m][k];
+        C[m] = T[m][m - 1];
+        C[m + 1] = 0;
+    }
+
+    public void build_tree( int[] C, long[] P, int n )
+    {
+        package_merge( C, P, n, MAX_CODE_LENGTH );
     }
 }
