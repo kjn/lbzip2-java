@@ -155,23 +155,4 @@ public class LBzip2InputStream
     {
         finish();
     }
-
-    public static void main( String[] args )
-    {
-        try
-        {
-            InputStream zis = new LBzip2InputStream( System.in );
-
-            byte[] buf = new byte[4096];
-            int r;
-            while ( ( r = zis.read( buf ) ) != -1 )
-                System.out.write( buf, 0, r );
-
-            zis.close();
-        }
-        catch ( IOException e )
-        {
-            e.printStackTrace();
-        }
-    }
 }

@@ -65,6 +65,13 @@
         <plugin>
           <artifactId>maven-jar-plugin</artifactId>
           <version>${jarPluginVersion}</version>
+          <configuration>
+            <archive>
+              <manifest>
+                <mainClass>org.lbzip2.Main</mainClass>
+              </manifest>
+            </archive>
+          </configuration>
         </plugin>
         <plugin>
           <artifactId>maven-resources-plugin</artifactId>
