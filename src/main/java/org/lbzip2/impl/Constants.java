@@ -97,6 +97,8 @@ class Constants
      */
     static final int MAX_TREES = 6;
 
+    static final int MAX_RUN_LENGTH = 4 + 255;
+
     /**
      * Initialize CRC table.
      */
