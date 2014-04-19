@@ -31,9 +31,10 @@ public abstract class AbstractBWTTest
     @Test
     public void testTrivialTransformation()
     {
-        int[] P = new int[] { 'M', 'I', 'S', 'S', 'I', 'S', 'S', 'I', 'P', 'P', 'I', 0 };
+        byte[] B = new byte[] { 'M', 'I', 'S', 'S', 'I', 'S', 'S', 'I', 'P', 'P', 'I' };
+        int[] P = new int[12];
 
-        int idx = bwt.transform( P, 11 );
+        int idx = bwt.transform( B, P, 11 );
 
         assertEquals( 'P', P[0] );
         assertEquals( 'S', P[1] );
@@ -53,8 +54,8 @@ public abstract class AbstractBWTTest
     @Test
     public void testFibonacciWords()
     {
-        int[] f2 = new int[] { 'A' };
-        int[] f1 = new int[] { 'A', 'B' };
+        byte[] f2 = new byte[] { 'A' };
+        byte[] f1 = new byte[] { 'A', 'B' };
 
         int x2 = 0;
         int x1 = 1;
@@ -62,15 +63,14 @@ public abstract class AbstractBWTTest
 
         for ( int j = 2; j <= 20; j++ )
         {
-            int[] f0 = new int[f1.length + f2.length];
+            byte[] f0 = new byte[f1.length + f2.length];
             System.arraycopy( f1, 0, f0, 0, f1.length );
             System.arraycopy( f2, 0, f0, f1.length, f2.length );
 
             int x0 = x2 + x1;
 
             int[] P = new int[f0.length + 1];
-            System.arraycopy( f0, 0, P, 0, f0.length );
-            int idx = bwt.transform( P, f0.length );
+            int idx = bwt.transform( f0, P, f0.length );
             assertEquals( x0 + d, idx );
 
             for ( int i = 0; i < f2.length; i++ )

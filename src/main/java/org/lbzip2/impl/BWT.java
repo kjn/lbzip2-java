@@ -18,5 +18,5 @@ package org.lbzip2.impl;
 interface BWT
 {
     // P must hold n+1 elements P[0..n-1}, P[n] is reserved as sentinel
-    int transform( int[] P, int n );
+    int transform( byte[] T, int[] P, int n );
 }

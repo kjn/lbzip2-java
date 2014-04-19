@@ -156,7 +156,7 @@ class Encoder
         /* Sort block. */
         assert ( col.nblock > 0 );
 
-        // bwt_idx = bwt(col.block, SA, col.nblock);
+        bwt_idx = bwt.transform( col.block, SA, col.nblock );
         nmtf = do_mtf( cmap, col.nblock );
 
         cost = 48 /* header */

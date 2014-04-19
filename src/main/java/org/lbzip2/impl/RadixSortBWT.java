@@ -25,16 +25,22 @@ import static org.lbzip2.impl.Unsigned.umin;
 class RadixSortBWT
     implements BWT
 {
-    public int transform( int[] B, int n )
+    public int transform( byte[] B, int[] P, int n )
     {
         int[] U = new int[256];
         int[] C = new int[256];
-        int[] P = new int[n];
         int[] R = new int[n];
+
+        if ( ( n & 1 ) != 0 )
+        {
+            int[] T = P;
+            P = R;
+            R = T;
+        }
 
         for ( int i = 0; i < n; i++ )
         {
-            C[B[i]]++;
+            C[B[i] & 0xFF]++;
             P[i] = i;
         }
 
@@ -51,7 +57,7 @@ class RadixSortBWT
             {
                 int j = P[i];
                 int t = umin( j - d, j - d + n );
-                R[U[B[t]]++] = j;
+                R[U[B[t] & 0xFF]++] = j;
             }
 
             int[] T = P;
@@ -59,7 +65,6 @@ class RadixSortBWT
             R = T;
         }
 
-        System.arraycopy( B, 0, R, 0, n );
         int idx = n;
         for ( int i = 0; i < n; i++ )
         {
@@ -71,7 +76,7 @@ class RadixSortBWT
                 j = n;
             }
 
-            B[i] = R[j - 1];
+            P[i] = B[j - 1] & 0xFF;
         }
 
         assert idx < n;

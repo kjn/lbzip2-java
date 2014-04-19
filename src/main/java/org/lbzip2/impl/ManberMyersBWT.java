@@ -25,26 +25,25 @@ package org.lbzip2.impl;
 class ManberMyersBWT
     implements BWT
 {
-    public int transform( int[] D, int n )
+    public int transform( byte[] D, int[] P, int n )
     {
-        int[] P, R, C;
+        int[] R, C;
         boolean[] A, B;
         int i, j, d, e, h;
 
         A = new boolean[n];
         B = new boolean[n + 1];
         C = new int[Math.max( n, 256 )];
-        P = new int[n];
         R = new int[n];
 
         for ( i = 0; i < 256; i++ )
             C[i] = 0;
         for ( i = 0; i < n; i++ )
-            C[D[i]]++;
+            C[D[i] & 0xFF]++;
         for ( i = 1; i < 256; i++ )
             C[i] += C[i - 1];
         for ( i = 0; i < n; i++ )
-            P[--C[D[i]]] = i;
+            P[--C[D[i] & 0xFF]] = i;
 
         for ( i = 0; i < n; i++ )
             B[i] = false;
@@ -100,9 +99,7 @@ class ManberMyersBWT
         j = R[0];
         P[j] = n;
         for ( i = 0; i < n; i++ )
-            R[i] = D[i];
-        for ( i = 0; i < n; i++ )
-            D[i] = R[P[i] - 1];
+            P[i] = D[P[i] - 1] & 0xFF;
 
         return j;
     }
