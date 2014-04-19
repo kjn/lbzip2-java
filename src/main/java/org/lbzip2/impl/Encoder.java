@@ -45,19 +45,21 @@ class Encoder
 
     private final byte[] selector_mtf = new byte[MAX_SELECTORS];
 
-    private int block_crc;
-
     private int bwt_idx;
-
-    private boolean[] inuse;
 
     private int out_expect_len;
 
-    private EntropyCoder ec;
-
     int EOB;
 
-    int do_mtf( int[] bwt, int[] mtffreq, int nblock )
+    private Collector col;
+
+    private EntropyCoder ec;
+
+    private BWT bwt;
+
+    int[] SA;
+
+    int do_mtf( int[] mtffreq, int nblock )
     {
         int i;
         int j;
@@ -72,7 +74,7 @@ class Encoder
 
         for ( i = 0; i < 256; i++ )
         {
-            k = inuse[i] ? 1 : 0;
+            k = col.inuse[i] ? 1 : 0;
 
             cmap[i] = j;
             j += k;
@@ -89,7 +91,7 @@ class Encoder
 
         for ( i = 0; i < nblock; i++ )
         {
-            if ( ( c = cmap[bwt[bwt_off++]] ) == u )
+            if ( ( c = cmap[SA[bwt_off++]] ) == u )
             {
                 k++;
                 continue;
@@ -135,6 +137,110 @@ class Encoder
         return mtfv_off;
     }
 
+    int encode( int[] crc )
+    {
+        int cost;
+        int pk;
+        int i;
+        int sp; /* selector pointer */
+        int smp; /* selector MTFV pointer */
+        int c; /* value before MTF */
+        int j; /* value after MTF */
+        int p; /* MTF state */
+
+        col.finish();
+
+        assert ( EOB >= 2 );
+        assert ( EOB < 258 );
+
+        /* Sort block. */
+        assert ( col.nblock > 0 );
+
+        // bwt_idx = bwt(col.block, SA, col.nblock);
+        nmtf = do_mtf( cmap, col.nblock );
+
+        cost = 48 /* header */
+            + 32 /* crc */
+            + 1 /* rand bit */
+            + 24 /* bwt index */
+            + 00 /* {cmap} */
+            + 3 /* nGroups */
+            + 15 /* nSelectors */
+            + 00 /* {sel} */
+            + 00 /* {tree} */
+            + 00; /* {mtfv} */
+
+        cost += ec.generate_prefix_code();
+
+        sp = 0;
+        smp = 0;
+
+        /*
+         * A trick that allows to do MTF without branching, using arithmetical and logical operations only. The whole
+         * MTF state packed into one 32-bit integer.
+         */
+
+        /* Set up initial MTF state. */
+        p = 0x543210;
+
+        assert ( ec.selector[0] < MAX_TREES );
+        assert ( ec.tmap_old2new[ec.selector[0]] == 0 );
+
+        while ( ( c = ec.selector[sp] ) != MAX_TREES )
+        {
+            int v, z, l, h;
+
+            c = ec.tmap_old2new[c];
+            assert ( c < ec.num_trees );
+            assert ( sp < ec.num_selectors );
+            v = p ^ ( 0x111111 * c );
+            z = ( v + 0xEEEEEF ) & 0x888888;
+            l = z ^ ( z - 1 );
+            h = ~l;
+            p = ( p | l ) & ( ( p << 4 ) | h | c );
+            h &= -h;
+            j = ( h & 0x01010100 ) != 0 ? 1 : 0;
+            h |= h >> 4;
+            j |= h >> 11;
+            j |= h >> 18;
+            j &= 7;
+            sp++;
+            selector_mtf[smp++] = (byte) j;
+            cost += j + 1;
+        }
+
+        /*
+         * Add zero to seven dummy selectors in order to make block size multiply of 8 bits.
+         */
+        j = cost & 0x7;
+        j = ( 8 - j ) & 0x7;
+        ec.num_selectors += j;
+        cost += j;
+        while ( j-- > 0 )
+            selector_mtf[smp++] = 0;
+        assert ( cost % 8 == 0 );
+
+        /* Calculate the cost of transmitting character map. */
+        for ( i = 0; i < 16; i++ )
+        {
+            pk = 0;
+            for ( j = 0; j < 16; j++ )
+                pk |= col.inuse[16 * i + j] ? 16 : 0;
+            cost += pk;
+        }
+        cost += 16; /* Big bucket costs 16 bits on its own. */
+
+        /* Convert cost from bits to bytes. */
+        assert ( cost % 8 == 0 );
+        cost >>= 3;
+
+        out_expect_len = cost;
+
+        crc[0] = col.block_crc;
+
+        return cost;
+    }
+
     private void SEND( int n, int v )
     {
         long b = this.b;
@@ -172,7 +278,7 @@ class Encoder
         /* Transmit block metadata. */
         SEND( 24, 0x314159 );
         SEND( 24, 0x265359 );
-        SEND( 32, block_crc ^ -1 );
+        SEND( 32, col.block_crc ^ -1 );
         SEND( 1, 0 ); /* non-rand */
         SEND( 24, bwt_idx ); /* bwt primary index */
 
@@ -189,7 +295,7 @@ class Encoder
                 for ( ; j < 16; j++ )
                 {
                     small <<= 1;
-                    if ( inuse[j] )
+                    if ( col.inuse[j] )
                     {
                         small |= 1;
                         big |= 1;

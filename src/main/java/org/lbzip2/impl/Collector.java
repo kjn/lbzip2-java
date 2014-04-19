@@ -25,17 +25,24 @@ class Collector
 {
     int nblock;
 
-    byte[] block;
+    final byte[] block;
 
-    int max_block_size;
+    private final int max_block_size;
 
     int block_crc;
 
-    int rle_state;
+    private int rle_state;
 
-    int rle_character;
+    private int rle_character;
 
-    boolean[] cmap = new boolean[256];
+    final boolean[] inuse = new boolean[256];
+
+    public Collector( int max_block_size )
+    {
+        this.max_block_size = max_block_size;
+
+        block = new byte[max_block_size];
+    }
 
     boolean collect( byte[] inbuf, int[] buf_sz )
     {
@@ -91,7 +98,7 @@ class Collector
                             if ( inbuf[p] != ch )
                             {
                                 block[q++] = (byte) ( rle_state - 4 );
-                                cmap[rle_state - 4] = true;
+                                inuse[rle_state - 4] = true;
                                 break finish_run;
                             }
 
@@ -110,7 +117,7 @@ class Collector
                             if ( rle_state == MAX_RUN_LENGTH )
                             {
                                 block[q++] = (byte) ( MAX_RUN_LENGTH - 4 );
-                                cmap[MAX_RUN_LENGTH - 4] = true;
+                                inuse[MAX_RUN_LENGTH - 4] = true;
                                 break finish_run;
                             }
                         }
@@ -156,7 +163,7 @@ class Collector
                     for ( ;; )
                     {
                         /* === STATE 1 === */
-                        cmap[ch] = true;
+                        inuse[ch] = true;
                         block[q++] = (byte) ch;
                         if ( q > qMax )
                         {
@@ -241,7 +248,7 @@ class Collector
                         if ( ch != last )
                         {
                             block[q++] = (byte) ( run - 4 );
-                            cmap[run - 4] = true;
+                            inuse[run - 4] = true;
                             if ( q <= qMax )
                                 continue state1;
 
@@ -259,7 +266,7 @@ class Collector
                      * The run has reached maximal length, so it must be ended prematurely.
                      */
                     block[q++] = (byte) ( MAX_RUN_LENGTH - 4 );
-                    cmap[MAX_RUN_LENGTH - 4] = true;
+                    inuse[MAX_RUN_LENGTH - 4] = true;
                 }
             }
         }
@@ -268,5 +275,17 @@ class Collector
         block_crc = crc;
         buf_sz[0] -= p;
         return rle_state < 0;
+    }
+
+    /* Finalize initial RLE. */
+    void finish()
+    {
+        if ( rle_state >= 4 )
+        {
+            assert ( nblock < max_block_size );
+            block[nblock++] = (byte) ( rle_state - 4 );
+            inuse[rle_state - 4] = true;
+        }
+        assert ( nblock > 0 );
     }
 }

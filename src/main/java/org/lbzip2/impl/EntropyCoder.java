@@ -63,8 +63,6 @@ class EntropyCoder
         this.mtfv = mtfv;
         this.nmtf = nmtf;
         this.cluster_factor = cluster_factor;
-
-        generate_prefix_code();
     }
 
     private long weight_add( long w1, long w2 )
@@ -510,7 +508,7 @@ class EntropyCoder
      * algorithm) 4) generates selectors 5) sorts trees by their first occurence in selector sequence 6) computes and
      * returns cost (in bits) of transmitting trees and codes
      */
-    private int generate_prefix_code()
+    int generate_prefix_code()
     {
         int as;
         int nt;
