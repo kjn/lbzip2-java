@@ -15,6 +15,13 @@
  */
 package org.lbzip2.impl;
 
+/**
+ * A BWT implementation based on the original Manber-Myers algorithm.
+ * <p>
+ * Implementation is directly based on paper <em>Suffix arrays: a new method for on-line string searches</em>.
+ * 
+ * @author Mikolaj Izdebski
+ */
 class ManberMyersBWT
     implements BWT
 {
