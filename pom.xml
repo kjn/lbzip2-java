@@ -11,6 +11,7 @@
   <properties>
     <project.build.sourceEncoding>US-ASCII</project.build.sourceEncoding>
     <junitVersion>4.11</junitVersion>
+    <slf4jVersion>1.7.7</slf4jVersion>
 
     <cleanPluginVersion>2.5</cleanPluginVersion>
     <compilerPluginVersion>3.1</compilerPluginVersion>
@@ -29,9 +30,28 @@
         <artifactId>junit</artifactId>
         <version>${junitVersion}</version>
       </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <version>${slf4jVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-simple</artifactId>
+        <version>${slf4jVersion}</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
   <dependencies>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-simple</artifactId>
+      <scope>runtime</scope>
+    </dependency>
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>

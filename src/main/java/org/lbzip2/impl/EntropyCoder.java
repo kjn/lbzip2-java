@@ -28,20 +28,15 @@ import static org.lbzip2.impl.Utils.insertion_sort;
 
 import java.util.Arrays;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * @author Mikolaj Izdebski
  */
 class EntropyCoder
 {
-    // TODO: use SLF4J
-    interface Logger
-    {
-        void trace( String msg, Object... args );
-
-        boolean isTraceEnabled();
-    }
-
-    private Logger logger;
+    private final Logger logger = LoggerFactory.getLogger( EntropyCoder.class );
 
     long b;
 
