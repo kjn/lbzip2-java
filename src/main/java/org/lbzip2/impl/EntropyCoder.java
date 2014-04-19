@@ -21,9 +21,9 @@ import static org.lbzip2.impl.Constants.GROUP_SIZE;
 import static org.lbzip2.impl.Constants.MAX_ALPHA_SIZE;
 import static org.lbzip2.impl.Constants.MAX_CODE_LENGTH;
 import static org.lbzip2.impl.Constants.MAX_HUFF_CODE_LENGTH;
+import static org.lbzip2.impl.Constants.MAX_SELECTORS;
 import static org.lbzip2.impl.Constants.MAX_TREES;
 import static org.lbzip2.impl.Constants.MIN_ALPHA_SIZE;
-import static org.lbzip2.impl.Constants.MIN_TREES;
 import static org.lbzip2.impl.Utils.insertion_sort;
 
 import java.util.Arrays;
@@ -38,45 +38,34 @@ class EntropyCoder
 {
     private final Logger logger = LoggerFactory.getLogger( EntropyCoder.class );
 
-    long b;
+    private final short[] mtfv;
 
-    int k;
+    private final int nmtf;
 
-    byte[] p;
+    private final int cluster_factor;
 
-    int p_off;
+    int num_selectors;
 
-    private short[] mtfv;
+    int num_trees;
 
-    private byte[] sp;
+    final byte[][] length = new byte[MAX_TREES][MAX_ALPHA_SIZE + 1];
 
-    private int nmtf;
+    final int[][] code = new int[MAX_TREES][MAX_ALPHA_SIZE + 1];
 
-    private int block_crc;
+    final byte[] selector = new byte[MAX_SELECTORS + 1];
 
-    private int bwt_idx;
+    final int[] tmap_new2old = new int[MAX_TREES];
 
-    private boolean[] inuse;
+    final int[] tmap_old2new = new int[MAX_TREES];
 
-    private int num_trees;
+    public EntropyCoder( short[] mtfv, int nmtf, int cluster_factor )
+    {
+        this.mtfv = mtfv;
+        this.nmtf = nmtf;
+        this.cluster_factor = cluster_factor;
 
-    private int num_selectors;
-
-    private int[] tmap_new2old;
-
-    private byte[][] length;
-
-    private int[] selector;
-
-    private int[][] code;
-
-    private int out_expect_len;
-
-    private int cluster_factor;
-
-    private int[][] frequency;
-
-    private int[] tmap_old2new;
+        generate_prefix_code();
+    }
 
     private long weight_add( long w1, long w2 )
     {
@@ -87,7 +76,7 @@ class EntropyCoder
      * Build a prefix-free tree. Because the source alphabet is already sorted, we need not to maintain a priority queue
      * -- two normal FIFO queues (one for leaves and one for internal nodes) will suffice.
      */
-    void build_tree( int[] tree, long[] weight, int as )
+    private void build_tree( int[] tree, long[] weight, int as )
     {
         int r; /* index of the next tree in the queue */
         int s; /* index of the next singleton leaf */
@@ -135,7 +124,7 @@ class EntropyCoder
     }
 
     /* Compute counts from given Huffman tree. The tree itself is clobbered. */
-    void compute_depths( int[] count, int[] tree, int as )
+    private void compute_depths( int[] count, int[] tree, int as )
     {
         int avail; /* total number of nodes at current level */
         int used; /* number of internal nodes */
@@ -172,7 +161,7 @@ class EntropyCoder
      * This class is an implementation of the Package-Merge algorithm for finding an optimal length-limited prefix-free
      * code set.
      */
-    void package_merge( short[][] tree, int[] count, long[] leaf_weight, int as )
+    private void package_merge( short[][] tree, int[] count, long[] leaf_weight, int as )
     {
         long[] pkg_weight = new long[MAX_CODE_LENGTH + 1];
         long[] prev_weight = new long[MAX_CODE_LENGTH + 1];
@@ -225,7 +214,7 @@ class EntropyCoder
         }
     }
 
-    void make_code_lengths( byte[] length, int[] frequency, int as )
+    private void make_code_lengths( byte[] length, int[] frequency, int as )
     {
         int i;
         int k;
@@ -288,7 +277,7 @@ class EntropyCoder
      * <p>
      * If the symbol v belongs to the equivalence class t then set length[t][v] to zero. Otherwise set it to 1.
      */
-    void generate_initial_trees( int nm, int nt )
+    private void generate_initial_trees( int nm, int nt )
     {
         int a, b; /* range [a,b) of symbols forming current EC */
         int freq; /* symbol frequency */
@@ -363,7 +352,7 @@ class EntropyCoder
      * Find the tree which takes the least number of bits to encode current group. Return number from 0 to nt-1
      * identifying the selected tree.
      */
-    int find_best_tree( short[] mtfv, int gs, int nt, long[] len_pack )
+    private int find_best_tree( short[] mtfv, int gs, int nt, long[] len_pack )
     {
         long c, bc; /* code length, best code length */
         int t, bt; /* tree, best tree */
@@ -521,7 +510,7 @@ class EntropyCoder
      * algorithm) 4) generates selectors 5) sorts trees by their first occurence in selector sequence 6) computes and
      * returns cost (in bits) of transmitting trees and codes
      */
-    int generate_prefix_code()
+    private int generate_prefix_code()
     {
         int as;
         int nt;
@@ -529,6 +518,7 @@ class EntropyCoder
         int cost;
 
         int nm = nmtf;
+        int[][] frequency = new int[MAX_TREES][MAX_ALPHA_SIZE + 1];
 
         as = mtfv[nm - 1] + 1; /* the last mtfv is EOB */
         num_selectors = ( nm + GROUP_SIZE - 1 ) / GROUP_SIZE;
@@ -582,13 +572,13 @@ class EntropyCoder
                  */
                 t = find_best_tree( mtfv, gs, nt, len_pack );
                 assert ( t < nt );
-                sp[sp_off++] = (byte) t;
+                selector[sp_off++] = (byte) t;
                 for ( i = 0; i < GROUP_SIZE; i++ )
                     frequency[t][mtfv[gs + i]]++;
             }
 
             assert ( sp_off == num_selectors );
-            sp[sp_off] = MAX_TREES; /* sentinel */
+            selector[sp_off] = MAX_TREES; /* sentinel */
 
             /* (M): Maximization step -- maximize expectations. */
             for ( t = 0; t < nt; t++ )
@@ -604,11 +594,11 @@ class EntropyCoder
              * seen yet.
              */
             int not_seen = ( 1 << nt ) - 1;
-            int t, v;
-            int sp_off = 0;
+            int t;
+            int sp = 0;
 
             nt = 0;
-            while ( not_seen > 0 && ( t = sp[sp_off++] ) < MAX_TREES )
+            while ( not_seen > 0 && ( t = selector[sp++] ) < MAX_TREES )
             {
                 if ( ( not_seen & ( 1 << t ) ) != 0 )
                 {
@@ -638,7 +628,7 @@ class EntropyCoder
                 t = tmap_new2old[0] ^ 1;
                 tmap_old2new[t] = 1;
                 tmap_new2old[1] = t;
-                for ( v = 0; v < MAX_ALPHA_SIZE; v++ )
+                for ( int v = 0; v < MAX_ALPHA_SIZE; v++ )
                     length[t][v] = MAX_CODE_LENGTH;
                 cost += as + 5;
             }
@@ -647,136 +637,4 @@ class EntropyCoder
         num_trees = nt;
         return cost;
     }
-
-    private void SEND( int n, int v )
-    {
-        long b = this.b;
-        int k = this.k;
-
-        b = ( b << n ) | ( v & 0xFFFFFFFFL );
-        if ( ( k += n ) >= 32 )
-        {
-            p[p_off++] = (byte) ( b >> ( k -= 8 ) );
-            p[p_off++] = (byte) ( b >> ( k -= 8 ) );
-            p[p_off++] = (byte) ( b >> ( k -= 8 ) );
-            p[p_off++] = (byte) ( b >> ( k -= 8 ) );
-        }
-
-        this.b = b;
-        this.k = k;
-    }
-
-    void transmit( byte[] buf )
-    {
-        int t;
-        int v;
-        int ns;
-        int as;
-
-        /* Initialize bit buffer. */
-        b = 0;
-        k = 0;
-        p = buf;
-
-        as = mtfv[nmtf - 1] + 1;
-        ns = ( nmtf + GROUP_SIZE - 1 ) / GROUP_SIZE;
-
-        /* Transmit block metadata. */
-        SEND( 24, 0x314159 );
-        SEND( 24, 0x265359 );
-        SEND( 32, block_crc ^ -1 );
-        SEND( 1, 0 ); /* non-rand */
-        SEND( 24, bwt_idx ); /* bwt primary index */
-
-        /* Transmit character map. */
-        {
-            int[] pack = new int[16];
-            int big = 0;
-
-            for ( int i = 0, j = 0; i < 16; i++ )
-            {
-                big <<= 1;
-
-                int small = 0;
-                for ( ; j < 16; j++ )
-                {
-                    small <<= 1;
-                    if ( inuse[j] )
-                    {
-                        small |= 1;
-                        big |= 1;
-                    }
-                }
-                pack[i] = small;
-            }
-
-            SEND( 16, big );
-            for ( int i = 0; i < 16; i++ )
-                if ( pack[i] != 0 )
-                    SEND( 16, pack[i] );
-        }
-
-        /* Transmit selectors. */
-        assert ( num_trees >= MIN_TREES && num_trees <= MAX_TREES );
-        SEND( 3, num_trees );
-        t = num_selectors;
-        SEND( 15, t );
-        int sp_off = 0;
-        while ( t-- > 0 )
-        {
-            v = 1 + sp[sp_off++];
-            SEND( v, ( 1 << v ) - 2 );
-        }
-
-        /* Transmit prefix trees. */
-        for ( t = 0; t < num_trees; t++ )
-        {
-            byte[] len = length[tmap_new2old[t]];
-
-            int a = len[0];
-            SEND( 6, a << 1 );
-            for ( v = 1; v < as; v++ )
-            {
-                int c = len[v];
-                while ( a < c )
-                {
-                    SEND( 2, 2 );
-                    a++;
-                }
-                while ( a > c )
-                {
-                    SEND( 2, 3 );
-                    a--;
-                }
-                SEND( 1, 0 );
-            }
-        }
-
-        int mtfv_off = 0;
-        /* Transmit prefix codes. */
-        for ( int gr = 0; gr < ns; gr++ )
-        {
-            int[] L; /* symbol-to-code lookup table */
-            byte[] B; /* code lengths */
-            int mv; /* symbol (MTF value) */
-
-            t = selector[gr];
-            L = code[t];
-            B = length[t];
-
-            for ( int i = 0; i < GROUP_SIZE; i++ )
-            {
-                mv = mtfv[mtfv_off++];
-                SEND( B[mv], L[mv] );
-            }
-        }
-
-        /* Flush */
-        while ( k > 0 )
-        {
-            p[p_off++] = (byte) ( b << ( 56 - ( k -= 8 ) ) >> 56 );
-        }
-        assert ( p_off == out_expect_len );
-    }
-
 }

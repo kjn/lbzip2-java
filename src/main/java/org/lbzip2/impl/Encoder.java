@@ -15,6 +15,11 @@
  */
 package org.lbzip2.impl;
 
+import static org.lbzip2.impl.Constants.GROUP_SIZE;
+import static org.lbzip2.impl.Constants.MAX_SELECTORS;
+import static org.lbzip2.impl.Constants.MAX_TREES;
+import static org.lbzip2.impl.Constants.MIN_TREES;
+
 import java.util.Arrays;
 
 /**
@@ -26,9 +31,33 @@ class Encoder
 
     private final int[] order = new int[255];
 
+    private long b;
+
+    private int k;
+
+    private byte[] p;
+
+    private int p_off;
+
+    private short[] mtfv;
+
+    private int nmtf;
+
+    private final byte[] selector_mtf = new byte[MAX_SELECTORS];
+
+    private int block_crc;
+
+    private int bwt_idx;
+
+    private boolean[] inuse;
+
+    private int out_expect_len;
+
+    private EntropyCoder ec;
+
     int EOB;
 
-    int do_mtf( int[] bwt, short[] mtfv, int[] mtffreq, boolean[] inuse, int nblock )
+    int do_mtf( int[] bwt, int[] mtffreq, int nblock )
     {
         int i;
         int j;
@@ -104,5 +133,137 @@ class Encoder
         mtffreq[EOB]++;
 
         return mtfv_off;
+    }
+
+    private void SEND( int n, int v )
+    {
+        long b = this.b;
+        int k = this.k;
+
+        b = ( b << n ) | ( v & 0xFFFFFFFFL );
+        if ( ( k += n ) >= 32 )
+        {
+            p[p_off++] = (byte) ( b >> ( k -= 8 ) );
+            p[p_off++] = (byte) ( b >> ( k -= 8 ) );
+            p[p_off++] = (byte) ( b >> ( k -= 8 ) );
+            p[p_off++] = (byte) ( b >> ( k -= 8 ) );
+        }
+
+        this.b = b;
+        this.k = k;
+    }
+
+    void transmit( byte[] buf )
+    {
+        int t;
+        int v;
+        int ns;
+        int as;
+
+        /* Initialize bit buffer. */
+        b = 0;
+        k = 0;
+        p = buf;
+        p_off = 0;
+
+        as = mtfv[nmtf - 1] + 1;
+        ns = ( nmtf + GROUP_SIZE - 1 ) / GROUP_SIZE;
+
+        /* Transmit block metadata. */
+        SEND( 24, 0x314159 );
+        SEND( 24, 0x265359 );
+        SEND( 32, block_crc ^ -1 );
+        SEND( 1, 0 ); /* non-rand */
+        SEND( 24, bwt_idx ); /* bwt primary index */
+
+        /* Transmit character map. */
+        {
+            int[] pack = new int[16];
+            int big = 0;
+
+            for ( int i = 0, j = 0; i < 16; i++ )
+            {
+                big <<= 1;
+
+                int small = 0;
+                for ( ; j < 16; j++ )
+                {
+                    small <<= 1;
+                    if ( inuse[j] )
+                    {
+                        small |= 1;
+                        big |= 1;
+                    }
+                }
+                pack[i] = small;
+            }
+
+            SEND( 16, big );
+            for ( int i = 0; i < 16; i++ )
+                if ( pack[i] != 0 )
+                    SEND( 16, pack[i] );
+        }
+
+        /* Transmit selectors. */
+        assert ( ec.num_trees >= MIN_TREES && ec.num_trees <= MAX_TREES );
+        SEND( 3, ec.num_trees );
+        t = ec.num_selectors;
+        SEND( 15, t );
+        int sp = 0;
+        while ( t-- > 0 )
+        {
+            v = 1 + selector_mtf[sp++];
+            SEND( v, ( 1 << v ) - 2 );
+        }
+
+        /* Transmit prefix trees. */
+        for ( t = 0; t < ec.num_trees; t++ )
+        {
+            byte[] len = ec.length[ec.tmap_new2old[t]];
+
+            int a = len[0];
+            SEND( 6, a << 1 );
+            for ( v = 1; v < as; v++ )
+            {
+                int c = len[v];
+                while ( a < c )
+                {
+                    SEND( 2, 2 );
+                    a++;
+                }
+                while ( a > c )
+                {
+                    SEND( 2, 3 );
+                    a--;
+                }
+                SEND( 1, 0 );
+            }
+        }
+
+        int mtfv_off = 0;
+        /* Transmit prefix codes. */
+        for ( int gr = 0; gr < ns; gr++ )
+        {
+            int[] L; /* symbol-to-code lookup table */
+            byte[] B; /* code lengths */
+            int mv; /* symbol (MTF value) */
+
+            t = ec.selector[gr];
+            L = ec.code[t];
+            B = ec.length[t];
+
+            for ( int i = 0; i < GROUP_SIZE; i++ )
+            {
+                mv = mtfv[mtfv_off++];
+                SEND( B[mv], L[mv] );
+            }
+        }
+
+        /* Flush */
+        while ( k > 0 )
+        {
+            p[p_off++] = (byte) ( b << ( 56 - ( k -= 8 ) ) >> 56 );
+        }
+        assert ( p_off == out_expect_len );
     }
 }
