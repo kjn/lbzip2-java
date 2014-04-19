@@ -59,7 +59,7 @@ class Collector
         /* Cache some often used member variables for faster access. */
         int avail = buf_sz[0];
         int p = off;
-        int pLim = avail;
+        int pLim = off + avail;
         int q = nblock;
         int qMax = max_block_size - 1;
         int ch, last;
@@ -117,7 +117,7 @@ class Collector
                              * length.
                              */
                             p++;
-                            crc = ( crc << 8 ) ^ crc_table[( crc >>> 24 ) ^ ch];
+                            crc = ( crc << 8 ) ^ crc_table[( crc >>> 24 ) ^ ( ch & 0xFF )];
                             rle_state++;
 
                             /*
@@ -144,7 +144,7 @@ class Collector
 
                     /* Append the character to the run. */
                     p++;
-                    crc = ( crc << 8 ) ^ crc_table[( crc >>> 24 ) ^ ch];
+                    crc = ( crc << 8 ) ^ crc_table[( crc >>> 24 ) ^ ( ch & 0xFF )];
                     rle_state++;
                     block[q++] = (byte) ch;
 
@@ -166,7 +166,7 @@ class Collector
                     break main_loop;
                 }
                 ch = inbuf[p++];
-                crc = ( crc << 8 ) ^ crc_table[( crc >>> 24 ) ^ ch];
+                crc = ( crc << 8 ) ^ crc_table[( crc >>> 24 ) ^ ( ch & 0xFF )];
 
                 state1: for ( ;; )
                 {
@@ -188,7 +188,7 @@ class Collector
                         }
                         last = ch;
                         ch = inbuf[p++];
-                        crc = ( crc << 8 ) ^ crc_table[( crc >>> 24 ) ^ ch];
+                        crc = ( crc << 8 ) ^ crc_table[( crc >>> 24 ) ^ ( ch & 0xFF )];
                         if ( ch == last )
                             break;
                     }
@@ -207,7 +207,7 @@ class Collector
                         break main_loop;
                     }
                     ch = inbuf[p++];
-                    crc = ( crc << 8 ) ^ crc_table[( crc >>> 24 ) ^ ch];
+                    crc = ( crc << 8 ) ^ crc_table[( crc >>> 24 ) ^ ( ch & 0xFF )];
                     if ( ch != last )
                         continue;
 
@@ -225,7 +225,7 @@ class Collector
                         break main_loop;
                     }
                     ch = inbuf[p++];
-                    crc = ( crc << 8 ) ^ crc_table[( crc >>> 24 ) ^ ch];
+                    crc = ( crc << 8 ) ^ crc_table[( crc >>> 24 ) ^ ( ch & 0xFF )];
                     if ( ch != last )
                         continue;
 
@@ -250,7 +250,7 @@ class Collector
                         /* Fetch the next character. */
                         ch = inbuf[p++];
                         save_crc = crc;
-                        crc = ( crc << 8 ) ^ crc_table[( crc >>> 24 ) ^ ch];
+                        crc = ( crc << 8 ) ^ crc_table[( crc >>> 24 ) ^ ( ch & 0xFF )];
 
                         /*
                          * If the character does not match, terminate the current run and start a fresh one.
@@ -277,6 +277,7 @@ class Collector
                      */
                     block[q++] = (byte) ( MAX_RUN_LENGTH - 4 );
                     inuse[MAX_RUN_LENGTH - 4] = true;
+                    break;
                 }
             }
         }
