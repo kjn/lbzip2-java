@@ -22,11 +22,16 @@ import static org.lbzip2.impl.Constants.MIN_TREES;
 
 import java.util.Arrays;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * @author Mikolaj Izdebski
  */
 class Encoder
 {
+    private final Logger logger = LoggerFactory.getLogger( Encoder.class );
+
     private final int[] cmap = new int[256];
 
     private final int[] order = new int[255];
@@ -39,7 +44,7 @@ class Encoder
 
     private int p_off;
 
-    private short[] mtfv;
+    private final short[] mtfv;
 
     private int nmtf;
 
@@ -49,17 +54,21 @@ class Encoder
 
     private int out_expect_len;
 
-    int EOB;
+    private final Collector col;
 
-    private Collector col;
+    private final EntropyCoder ec;
 
-    private EntropyCoder ec;
+    private final BWT bwt = new ManberMyersBWT();
 
-    private BWT bwt;
+    public Encoder( Collector col, EntropyCoder ec )
+    {
+        this.col = col;
+        this.ec = ec;
 
-    int[] SA;
+        mtfv = new short[col.max_block_size + GROUP_SIZE];
+    }
 
-    int do_mtf( int[] mtffreq, int nblock )
+    private int do_mtf( int[] SA, int[] mtffreq, int nblock )
     {
         int i;
         int j;
@@ -80,7 +89,9 @@ class Encoder
             j += k;
         }
 
-        EOB = j;
+        int EOB = j + 1;
+        assert ( EOB >= 2 );
+        assert ( EOB < 258 );
 
         Arrays.fill( mtffreq, 0 );
 
@@ -148,16 +159,13 @@ class Encoder
         int j; /* value after MTF */
         int p; /* MTF state */
 
-        col.finish();
-
-        assert ( EOB >= 2 );
-        assert ( EOB < 258 );
-
         /* Sort block. */
         assert ( col.nblock > 0 );
-
+        int[] SA = new int[col.nblock + 1];
         bwt_idx = bwt.transform( col.block, SA, col.nblock );
-        nmtf = do_mtf( cmap, col.nblock );
+        nmtf = do_mtf( SA, ec.code[0], col.nblock );
+        logger.debug( "Block info: bs={}, idx={}, nm={}, as={}", col.nblock, bwt_idx, nmtf, mtfv[nmtf - 1] + 1 );
+        SA = null;
 
         cost = 48 /* header */
             + 32 /* crc */
@@ -170,7 +178,7 @@ class Encoder
             + 00 /* {tree} */
             + 00; /* {mtfv} */
 
-        cost += ec.generate_prefix_code();
+        cost += ec.generate_prefix_code( mtfv, nmtf );
 
         sp = 0;
         smp = 0;
@@ -238,6 +246,9 @@ class Encoder
 
         crc[0] = col.block_crc;
 
+        logger.debug( "Block transmission cost is {} bytes", cost );
+        logger.debug( "Block CRC is {}", String.format( "%08X", col.block_crc ^ -1 ) );
+
         return cost;
     }
 
@@ -287,15 +298,15 @@ class Encoder
             int[] pack = new int[16];
             int big = 0;
 
-            for ( int i = 0, j = 0; i < 16; i++ )
+            for ( int i = 0; i < 16; i++ )
             {
                 big <<= 1;
 
                 int small = 0;
-                for ( ; j < 16; j++ )
+                for ( int j = 0; j < 16; j++ )
                 {
                     small <<= 1;
-                    if ( col.inuse[j] )
+                    if ( col.inuse[16 * i + j] )
                     {
                         small |= 1;
                         big |= 1;

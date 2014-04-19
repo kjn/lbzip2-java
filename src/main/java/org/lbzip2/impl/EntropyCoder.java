@@ -15,6 +15,7 @@
  */
 package org.lbzip2.impl;
 
+import static java.lang.Math.abs;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static org.lbzip2.impl.Constants.GROUP_SIZE;
@@ -38,10 +39,6 @@ class EntropyCoder
 {
     private final Logger logger = LoggerFactory.getLogger( EntropyCoder.class );
 
-    private final short[] mtfv;
-
-    private final int nmtf;
-
     private final int cluster_factor;
 
     int num_selectors;
@@ -58,10 +55,8 @@ class EntropyCoder
 
     final int[] tmap_old2new = new int[MAX_TREES];
 
-    public EntropyCoder( short[] mtfv, int nmtf, int cluster_factor )
+    public EntropyCoder( int cluster_factor )
     {
-        this.mtfv = mtfv;
-        this.nmtf = nmtf;
         this.cluster_factor = cluster_factor;
     }
 
@@ -168,7 +163,7 @@ class EntropyCoder
         int next_depth;
         int depth;
 
-        pkg_weight[0] = -1;
+        pkg_weight[0] = Long.MAX_VALUE;
 
         for ( depth = 1; depth <= MAX_CODE_LENGTH; depth++ )
         {
@@ -236,7 +231,7 @@ class EntropyCoder
              * FFFFFFFF00000000 - symbol frequency 00000000FF000000 - node depth 0000000000FF0000 - initially one
              * 000000000000FFFF - symbol
              */
-            weight[i] = ( ( max( frequency[i], 1 ) << 32 ) | 0x10000 | ( MAX_ALPHA_SIZE - i ) );
+            weight[i] = ( ( max( frequency[i], 1L ) << 32 ) | 0x10000 | ( MAX_ALPHA_SIZE - i ) );
         }
 
         /* Sort weights and sequence numbers together. */
@@ -262,7 +257,7 @@ class EntropyCoder
                 k--;
             }
         }
-        assert ( c == ( 1L << ( MAX_HUFF_CODE_LENGTH + 1 ) ) );
+        assert ( c == ( 1 << ( MAX_HUFF_CODE_LENGTH + 1 ) ) );
         assert ( i == as );
     }
 
@@ -283,10 +278,10 @@ class EntropyCoder
         int as; /*
                  * effective alphabet size (alphabet size minus number of symbols with frequency equal to zero)
                  */
-        int t; /* current tree */
 
         /* Equivalence classes are initially empty. */
-        Arrays.fill( length, 1 );
+        for ( int t = 0; t < nt; t++ )
+            Arrays.fill( length[t], (byte) 1 );
 
         /* Determine effective alphabet size. */
         as = 0;
@@ -306,7 +301,7 @@ class EntropyCoder
 
         /* For each equivalence class: */
         a = 0;
-        for ( t = 0; nt > 0; t++, nt-- )
+        for ( int t = 0; nt > 0; t++, nt-- )
         {
             assert ( nm > 0 );
             assert ( as >= nt );
@@ -335,7 +330,7 @@ class EntropyCoder
             assert ( cum > 0 );
             assert ( cum <= nm );
             assert ( as >= nt - 1 );
-            logger.trace( "Tree %u: EC=[{},{}), |EC|={}, cum={}", t, a, b, b - a, cum );
+            logger.trace( "Initial tree {}: EC=[{},{}), |EC|={}, cum={}", t, a, b, b - a, cum );
 
             /* Now [a,b) is our range -- assign it to equivalence class t. */
             while ( a < b )
@@ -408,13 +403,13 @@ class EntropyCoder
         for ( leaf = 0; leaf < as; leaf++ )
             leaf_weight[leaf + 1] = ( ( (long) frequency[leaf] << 32 ) | 0x10000 | ( MAX_ALPHA_SIZE - leaf ) );
         insertion_sort( leaf_weight, 1, as + 1 );
-        leaf_weight[0] = -1;
+        leaf_weight[0] = Long.MAX_VALUE;
 
         for ( int i = 0; i <= MAX_CODE_LENGTH; i++ )
             Arrays.fill( tree[i], (short) 0 );
         package_merge( tree, count, leaf_weight, as );
 
-        best_cost = -1;
+        best_cost = Integer.MAX_VALUE;
         best_height = MAX_CODE_LENGTH;
 
         for ( height = 2; height <= MAX_CODE_LENGTH; height++ )
@@ -442,7 +437,7 @@ class EntropyCoder
             }
 
             for ( symbol = 1; symbol < as; symbol++ )
-                cost += 2 * max( length[symbol - 1] - length[symbol], length[symbol] - length[symbol - 1] );
+                cost += 2 * abs( length[symbol - 1] - length[symbol] );
             cost += 5 + as;
 
             logger.trace( "    for height={} transmission cost is {}", height, cost );
@@ -472,7 +467,7 @@ class EntropyCoder
                 avail--;
             }
         }
-        assert ( next_code == ( 1L << ( best_height + 1 ) ) );
+        assert ( next_code == ( 1 << ( best_height + 1 ) ) );
         assert ( leaf == as );
 
         /* Assign prefix-free codes. */
@@ -508,14 +503,13 @@ class EntropyCoder
      * algorithm) 4) generates selectors 5) sorts trees by their first occurence in selector sequence 6) computes and
      * returns cost (in bits) of transmitting trees and codes
      */
-    int generate_prefix_code()
+    int generate_prefix_code( short[] mtfv, int nm )
     {
         int as;
         int nt;
         int iter, i;
         int cost;
 
-        int nm = nmtf;
         int[][] frequency = new int[MAX_TREES][MAX_ALPHA_SIZE + 1];
 
         as = mtfv[nm - 1] + 1; /* the last mtfv is EOB */

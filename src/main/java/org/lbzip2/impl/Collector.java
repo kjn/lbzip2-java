@@ -18,6 +18,8 @@ package org.lbzip2.impl;
 import static org.lbzip2.impl.Constants.MAX_RUN_LENGTH;
 import static org.lbzip2.impl.Constants.crc_table;
 
+import java.util.Arrays;
+
 /**
  * @author Mikolaj Izdebski
  */
@@ -27,7 +29,7 @@ class Collector
 
     final byte[] block;
 
-    private final int max_block_size;
+    final int max_block_size;
 
     int block_crc;
 
@@ -44,11 +46,19 @@ class Collector
         block = new byte[max_block_size];
     }
 
-    boolean collect( byte[] inbuf, int[] buf_sz )
+    void reset()
+    {
+        Arrays.fill( inuse, false );
+        rle_state = 0;
+        block_crc = -1;
+        nblock = 0;
+    }
+
+    boolean collect( byte[] inbuf, int off, int[] buf_sz )
     {
         /* Cache some often used member variables for faster access. */
         int avail = buf_sz[0];
-        int p = 0;
+        int p = off;
         int pLim = avail;
         int q = nblock;
         int qMax = max_block_size - 1;
@@ -273,7 +283,7 @@ class Collector
 
         nblock = q;
         block_crc = crc;
-        buf_sz[0] -= p;
+        buf_sz[0] -= p - off;
         return rle_state < 0;
     }
 
