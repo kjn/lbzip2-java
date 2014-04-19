@@ -64,6 +64,13 @@ class Constants
     static final int RAND_THRESH = 617;
 
     /**
+     * Minimal alphabet size.
+     * <p>
+     * There must always be at least two RUN symbols and one EOB symbol.
+     */
+    static final int MIN_ALPHA_SIZE = 3;
+
+    /**
      * Maximal alphabet size.
      * <p>
      * Alphabet consists of exactly two RUN symbols, from 0 to 255 MTF values and one EOB symbol. This makes possible
@@ -81,6 +88,13 @@ class Constants
     static final int MAX_CODE_LENGTH = 20;
 
     /**
+     * Maximal code length that can possibly be generated using simple Huffman algorighm is limited by maximal block
+     * size. Generated codes should never be longer than 30 bits because Fib(30+1) > MAX_BLOCK_SIZE+1. (Huffman codes
+     * are closely connected with the Fibonacci numbers.)
+     **/
+    static final int MAX_HUFF_CODE_LENGTH = 30;
+
+    /**
      * Minimal length of prefix code.
      * <p>
      * In <em>bz2</em> file format zero-length codes are not allowed, thus minimal code length is one.
@@ -93,11 +107,18 @@ class Constants
     static final int MAX_SELECTORS = 18001;
 
     /**
+     * Minimal number of coding trees in one block.
+     */
+    static final int MIN_TREES = 2;
+
+    /**
      * Maximal number of coding trees in one block.
      */
     static final int MAX_TREES = 6;
 
     static final int MAX_RUN_LENGTH = 4 + 255;
+
+    static final int GROUP_SIZE = 50;
 
     /**
      * Initialize CRC table.
