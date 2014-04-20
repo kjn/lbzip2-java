@@ -20,13 +20,6 @@
   along with lbzip2.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "common.h"
-
-#include "encode.h"
-
-#include <strings.h>            /* bzero() */
-
-
 /*- Settings -*/
 #define SS_INSERTIONSORT_THRESHOLD 8
 #define SS_BLOCKSIZE 1024
@@ -39,60 +32,16 @@ typedef int32_t saidx_t;
 typedef int_fast32_t saint_t;
 
 
-/*- Constants -*/
-#define INLINE
-/* for sssort.c */
-#if defined(SS_INSERTIONSORT_THRESHOLD)
-# if SS_INSERTIONSORT_THRESHOLD < 1
-#  undef SS_INSERTIONSORT_THRESHOLD
-#  define SS_INSERTIONSORT_THRESHOLD (1)
-# endif
-#else
-# define SS_INSERTIONSORT_THRESHOLD (8)
-#endif
-#if defined(SS_BLOCKSIZE)
-# if SS_BLOCKSIZE < 0
-#  undef SS_BLOCKSIZE
-#  define SS_BLOCKSIZE (0)
-# elif 32768 <= SS_BLOCKSIZE
-#  undef SS_BLOCKSIZE
-#  define SS_BLOCKSIZE (32767)
-# endif
-#else
-# define SS_BLOCKSIZE (1024)
-#endif
 /* minstacksize = log(SS_BLOCKSIZE) / log(3) * 2 */
-#if SS_BLOCKSIZE == 0
-# if defined(BUILD_DIVSUFSORT64)
-#  define SS_MISORT_STACKSIZE (96)
-# else
-#  define SS_MISORT_STACKSIZE (64)
-# endif
-#elif SS_BLOCKSIZE <= 4096
 # define SS_MISORT_STACKSIZE (16)
-#else
-# define SS_MISORT_STACKSIZE (24)
-#endif
-#if defined(BUILD_DIVSUFSORT64)
-# define SS_SMERGE_STACKSIZE (64)
-#else
 # define SS_SMERGE_STACKSIZE (32)
-#endif
 /* for trsort.c */
 #define TR_INSERTIONSORT_THRESHOLD (8)
-#if defined(BUILD_DIVSUFSORT64)
-# define TR_STACKSIZE (96)
-#else
 # define TR_STACKSIZE (64)
-#endif
 
 /*- Macros -*/
-#ifndef SWAP
 # define SWAP(_a, _b) do { t = (_a); (_a) = (_b); (_b) = t; } while(0)
-#endif /* SWAP */
-#ifndef MIN
 # define MIN(_a, _b) (((_a) < (_b)) ? (_a) : (_b))
-#endif /* MIN */
 #define STACK_PUSH(_a, _b, _c, _d)\
   do {\
     assert(ssize < STACK_SIZE);\
@@ -121,13 +70,8 @@ typedef int_fast32_t saint_t;
   } while(0)
 /* for divsufsort.c */
 #define BUCKET_A(_c0) bucket[(_c0) + ALPHABET_SIZE * ALPHABET_SIZE]
-#if ALPHABET_SIZE == 256
 #define BUCKET_B(_c0, _c1) (bucket[((_c1) << 8) | (_c0)])
 #define BUCKET_BSTAR(_c0, _c1) (bucket[((_c0) << 8) | (_c1)])
-#else
-#define BUCKET_B(_c0, _c1) (bucket[(_c1) * ALPHABET_SIZE + (_c0)])
-#define BUCKET_BSTAR(_c0, _c1) (bucket[(_c0) * ALPHABET_SIZE + (_c1)])
-#endif
 /* for trsort.c */
 #define TR_GETC(_p) (((_p) < (ISAn - ISAd)) ? ISAd[(_p)] : ISA[(ISAd - ISA + (_p)) % (ISAn - ISA)])
 /* for sssort.c and trsort.c */
@@ -147,49 +91,14 @@ static const saint_t lg_table[256]= {
 
 /*- Private Functions -*/
 
-#if (SS_BLOCKSIZE == 0) || (SS_INSERTIONSORT_THRESHOLD < SS_BLOCKSIZE)
-
 static INLINE
 saint_t
 ss_ilg(saidx_t n) {
-#if SS_BLOCKSIZE == 0
-# if defined(BUILD_DIVSUFSORT64)
-  return (n >> 32) ?
-          ((n >> 48) ?
-            ((n >> 56) ?
-              56 + lg_table[(n >> 56) & 0xff] :
-              48 + lg_table[(n >> 48) & 0xff]) :
-            ((n >> 40) ?
-              40 + lg_table[(n >> 40) & 0xff] :
-              32 + lg_table[(n >> 32) & 0xff])) :
-          ((n & 0xffff0000) ?
-            ((n & 0xff000000) ?
-              24 + lg_table[(n >> 24) & 0xff] :
-              16 + lg_table[(n >> 16) & 0xff]) :
-            ((n & 0x0000ff00) ?
-               8 + lg_table[(n >>  8) & 0xff] :
-               0 + lg_table[(n >>  0) & 0xff]));
-# else
-  return (n & 0xffff0000) ?
-          ((n & 0xff000000) ?
-            24 + lg_table[(n >> 24) & 0xff] :
-            16 + lg_table[(n >> 16) & 0xff]) :
-          ((n & 0x0000ff00) ?
-             8 + lg_table[(n >>  8) & 0xff] :
-             0 + lg_table[(n >>  0) & 0xff]);
-# endif
-#elif SS_BLOCKSIZE < 256
-  return lg_table[n];
-#else
   return (n & 0xff00) ?
           8 + lg_table[(n >> 8) & 0xff] :
           0 + lg_table[(n >> 0) & 0xff];
-#endif
 }
 
-#endif /* (SS_BLOCKSIZE == 0) || (SS_INSERTIONSORT_THRESHOLD < SS_BLOCKSIZE) */
-
-#if SS_BLOCKSIZE != 0
 
 static const saint_t sqq_table[256] = {
   0,  16,  22,  27,  32,  35,  39,  42,  45,  48,  50,  53,  55,  57,  59,  61,
@@ -236,8 +145,6 @@ ss_isqrt(saidx_t x) {
 
   return (x < (y * y)) ? y - 1 : y;
 }
-
-#endif /* SS_BLOCKSIZE != 0 */
 
 
 /*---------------------------------------------------------------------------*/
@@ -295,8 +202,6 @@ ss_compare_last(const sauchar_t *T, const saidx_t *PA,
 
 /*---------------------------------------------------------------------------*/
 
-#if (SS_BLOCKSIZE != 1) && (SS_INSERTIONSORT_THRESHOLD != 1)
-
 /* Insertionsort for small size groups */
 static
 void
@@ -316,12 +221,8 @@ ss_insertionsort(const sauchar_t *T, const saidx_t *PA,
   }
 }
 
-#endif /* (SS_BLOCKSIZE != 1) && (SS_INSERTIONSORT_THRESHOLD != 1) */
-
 
 /*---------------------------------------------------------------------------*/
-
-#if (SS_BLOCKSIZE == 0) || (SS_INSERTIONSORT_THRESHOLD < SS_BLOCKSIZE)
 
 static INLINE
 void
@@ -458,9 +359,7 @@ ss_mintrosort(const sauchar_t *T, const saidx_t *PA,
   for(ssize = 0, limit = ss_ilg(last - first);;) {
 
     if((last - first) <= SS_INSERTIONSORT_THRESHOLD) {
-#if 1 < SS_INSERTIONSORT_THRESHOLD
       if(1 < (last - first)) { ss_insertionsort(T, PA, first, last, depth); }
-#endif
       STACK_POP(first, last, depth, limit);
       continue;
     }
@@ -576,12 +475,8 @@ ss_mintrosort(const sauchar_t *T, const saidx_t *PA,
 #undef STACK_SIZE
 }
 
-#endif /* (SS_BLOCKSIZE == 0) || (SS_INSERTIONSORT_THRESHOLD < SS_BLOCKSIZE) */
-
 
 /*---------------------------------------------------------------------------*/
-
-#if SS_BLOCKSIZE != 0
 
 static INLINE
 void
@@ -871,8 +766,6 @@ ss_swapmerge(const sauchar_t *T, const saidx_t *PA,
 #undef STACK_SIZE
 }
 
-#endif /* SS_BLOCKSIZE != 0 */
-
 
 /*---------------------------------------------------------------------------*/
 
@@ -886,17 +779,12 @@ sssort(const sauchar_t *T, const saidx_t *PA,
        saidx_t *buf, saidx_t bufsize,
        saidx_t depth, saidx_t n, saint_t lastsuffix) {
   saidx_t *a;
-#if SS_BLOCKSIZE != 0
   saidx_t *b, *middle, *curbuf;
   saidx_t j, k, curbufsize, limit;
-#endif
   saidx_t i;
 
   if(lastsuffix != 0) { ++first; }
 
-#if SS_BLOCKSIZE == 0
-  ss_mintrosort(T, PA, first, last, depth);
-#else
   if((bufsize < SS_BLOCKSIZE) &&
       (bufsize < (last - first)) &&
       (bufsize < (limit = ss_isqrt(last - first)))) {
@@ -906,11 +794,7 @@ sssort(const sauchar_t *T, const saidx_t *PA,
     middle = last, limit = 0;
   }
   for(a = first, i = 0; SS_BLOCKSIZE < (middle - a); a += SS_BLOCKSIZE, ++i) {
-#if SS_INSERTIONSORT_THRESHOLD < SS_BLOCKSIZE
     ss_mintrosort(T, PA, a, a + SS_BLOCKSIZE, depth);
-#elif 1 < SS_BLOCKSIZE
-    ss_insertionsort(T, PA, a, a + SS_BLOCKSIZE, depth);
-#endif
     curbufsize = last - (a + SS_BLOCKSIZE);
     curbuf = a + SS_BLOCKSIZE;
     if(curbufsize <= bufsize) { curbufsize = bufsize, curbuf = buf; }
@@ -918,11 +802,7 @@ sssort(const sauchar_t *T, const saidx_t *PA,
       ss_swapmerge(T, PA, b - k, b, b + k, curbuf, curbufsize, depth);
     }
   }
-#if SS_INSERTIONSORT_THRESHOLD < SS_BLOCKSIZE
   ss_mintrosort(T, PA, a, middle, depth);
-#elif 1 < SS_BLOCKSIZE
-  ss_insertionsort(T, PA, a, middle, depth);
-#endif
   for(k = SS_BLOCKSIZE; i != 0; k <<= 1, i >>= 1) {
     if(i & 1) {
       ss_swapmerge(T, PA, a - k, a, middle, buf, bufsize, depth);
@@ -930,14 +810,9 @@ sssort(const sauchar_t *T, const saidx_t *PA,
     }
   }
   if(limit != 0) {
-#if SS_INSERTIONSORT_THRESHOLD < SS_BLOCKSIZE
     ss_mintrosort(T, PA, middle, last, depth);
-#elif 1 < SS_BLOCKSIZE
-    ss_insertionsort(T, PA, middle, last, depth);
-#endif
     ss_inplacemerge(T, PA, first, middle, last, depth);
   }
-#endif
 
   if(lastsuffix != 0) {
     /* Insert last type B* suffix. */
@@ -960,23 +835,6 @@ sssort(const sauchar_t *T, const saidx_t *PA,
 static INLINE
 saint_t
 tr_ilg(saidx_t n) {
-#if defined(BUILD_DIVSUFSORT64)
-  return (n >> 32) ?
-          ((n >> 48) ?
-            ((n >> 56) ?
-              56 + lg_table[(n >> 56) & 0xff] :
-              48 + lg_table[(n >> 48) & 0xff]) :
-            ((n >> 40) ?
-              40 + lg_table[(n >> 40) & 0xff] :
-              32 + lg_table[(n >> 32) & 0xff])) :
-          ((n & 0xffff0000) ?
-            ((n & 0xff000000) ?
-              24 + lg_table[(n >> 24) & 0xff] :
-              16 + lg_table[(n >> 16) & 0xff]) :
-            ((n & 0x0000ff00) ?
-               8 + lg_table[(n >>  8) & 0xff] :
-               0 + lg_table[(n >>  0) & 0xff]));
-#else
   return (n & 0xffff0000) ?
           ((n & 0xff000000) ?
             24 + lg_table[(n >> 24) & 0xff] :
@@ -984,7 +842,6 @@ tr_ilg(saidx_t n) {
           ((n & 0x0000ff00) ?
              8 + lg_table[(n >>  8) & 0xff] :
              0 + lg_table[(n >>  0) & 0xff]);
-#endif
 }
 
 
