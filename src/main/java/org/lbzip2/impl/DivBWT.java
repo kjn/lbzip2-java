@@ -214,38 +214,38 @@ ss_insertionsort(byte *T, int *PA,
 private
 void
 ss_fixdown(byte[] T, int depth, int *PA,
-           int *SA, int i, int size) {
+           int *HR, int i, int size) {
   int j, k;
   int v;
   int c, d, e;
 
-  for(v = SA[i], c = T[PA[v] + depth]; (j = 2 * i + 1) < size; SA[i] = SA[k], i = k) {
-    d = T[PA[SA[k = j++]] + depth];
-    if(d < (e = T[PA[SA[j]] + depth])) { k = j; d = e; }
+  for(v = HR[i], c = T[PA[v] + depth]; (j = 2 * i + 1) < size; HR[i] = HR[k], i = k) {
+    d = T[PA[HR[k = j++]] + depth];
+    if(d < (e = T[PA[HR[j]] + depth])) { k = j; d = e; }
     if(d <= c) { break; }
   }
-  SA[i] = v;
+  HR[i] = v;
 }
 
 /* Simple top-down heapsort. */
 private
 void
-ss_heapsort(byte[] T, int depth, int *PA, int *SA, int size) {
+ss_heapsort(byte[] T, int depth, int *PA, int *HR, int size) {
   int i, m;
   int t;
 
   m = size;
   if((size % 2) == 0) {
     m--;
-    if(T[PA[SA[m / 2]] + depth] < T[PA[SA[m]] + depth]) { t = SA[m]; SA[m] = SA[m / 2]; SA[m / 2] = t; }
+    if(T[PA[HR[m / 2]] + depth] < T[PA[HR[m]] + depth]) { t = HR[m]; HR[m] = HR[m / 2]; HR[m / 2] = t; }
   }
 
-  for(i = m / 2 - 1; 0 <= i; --i) { ss_fixdown(T, depth, PA, SA, i, m); }
-  if((size % 2) == 0) { t = SA[0]; SA[0] = SA[m]; SA[m] = t; ss_fixdown(T, depth, PA, SA, 0, m); }
+  for(i = m / 2 - 1; 0 <= i; --i) { ss_fixdown(T, depth, PA, HR, i, m); }
+  if((size % 2) == 0) { t = HR[0]; HR[0] = HR[m]; HR[m] = t; ss_fixdown(T, depth, PA, HR, 0, m); }
   for(i = m - 1; 0 < i; --i) {
-    t = SA[0], SA[0] = SA[i];
-    ss_fixdown(T, depth, PA, SA, 0, i);
-    SA[i] = t;
+    t = HR[0], HR[0] = HR[i];
+    ss_fixdown(T, depth, PA, HR, 0, i);
+    HR[i] = t;
   }
 }
 
@@ -876,40 +876,40 @@ tr_insertionsort(int *ISA, int *ISAd, int *ISAn,
 private
 void
 tr_fixdown(int *ISA, int *ISAd, int *ISAn,
-           int *SA, int i, int size) {
+           int *HB, int i, int size) {
   int j, k;
   int v;
   int c, d, e;
 
-  for(v = SA[i], c = TR_GETC(v); (j = 2 * i + 1) < size; SA[i] = SA[k], i = k) {
+  for(v = HB[i], c = TR_GETC(v); (j = 2 * i + 1) < size; HB[i] = HB[k], i = k) {
     k = j++;
-    d = TR_GETC(SA[k]);
-    if(d < (e = TR_GETC(SA[j]))) { k = j; d = e; }
+    d = TR_GETC(HB[k]);
+    if(d < (e = TR_GETC(HB[j]))) { k = j; d = e; }
     if(d <= c) { break; }
   }
-  SA[i] = v;
+  HB[i] = v;
 }
 
 /* Simple top-down heapsort. */
 private
 void
 tr_heapsort(int *ISA, int *ISAd, int *ISAn,
-            int *SA, int size) {
+            int *HR, int size) {
   int i, m;
   int t;
 
   m = size;
   if((size % 2) == 0) {
     m--;
-    if(TR_GETC(SA[m / 2]) < TR_GETC(SA[m])) { t = SA[m]; SA[m] = SA[m / 2]; SA[m / 2] = t; }
+    if(TR_GETC(HR[m / 2]) < TR_GETC(HR[m])) { t = HR[m]; HR[m] = HR[m / 2]; HR[m / 2] = t; }
   }
 
-  for(i = m / 2 - 1; 0 <= i; --i) { tr_fixdown(ISA, ISAd, ISAn, SA, i, m); }
-  if((size % 2) == 0) { t = SA[0]; SA[0] = SA[m]; SA[m] = t; tr_fixdown(ISA, ISAd, ISAn, SA, 0, m); }
+  for(i = m / 2 - 1; 0 <= i; --i) { tr_fixdown(ISA, ISAd, ISAn, HR, i, m); }
+  if((size % 2) == 0) { t = HR[0]; HR[0] = HR[m]; HR[m] = t; tr_fixdown(ISA, ISAd, ISAn, HR, 0, m); }
   for(i = m - 1; 0 < i; --i) {
-    t = SA[0], SA[0] = SA[i];
-    tr_fixdown(ISA, ISAd, ISAn, SA, 0, i);
-    SA[i] = t;
+    t = HR[0], HR[0] = HR[i];
+    tr_fixdown(ISA, ISAd, ISAn, HR, 0, i);
+    HR[i] = t;
   }
 }
 
