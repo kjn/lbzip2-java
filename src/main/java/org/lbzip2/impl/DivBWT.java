@@ -159,7 +159,7 @@ ss_compare(byte *T,
 
 private
 int
-ss_compare_last(byte *T, int *PA,
+ss_compare_last(byte *T, int[] SA, int xpa,
                 int *p1, int *p2,
                 int depth, int size) {
   byte *U1, *U2, *U1n, *U2n;
@@ -175,7 +175,7 @@ ss_compare_last(byte *T, int *PA,
   if(U1 < U1n) { return (U2 < U2n) ? *U1 - *U2 : 1; }
   else if(U2 == U2n) { return 1; }
 
-  for(U1 = T + (U1 - T) % size, U1n = T + PA[0] + 2;
+  for(U1 = T + (U1 - T) % size, U1n = T + SA[xpa] + 2;
       (U1 < U1n) && (U2 < U2n) && (*U1 == *U2);
       ++U1, ++U2) {
   }
@@ -192,14 +192,14 @@ ss_compare_last(byte *T, int *PA,
 /* Insertionsort for small size groups */
 private
 void
-ss_insertionsort(byte *T, int *PA,
+ss_insertionsort(byte *T, int[] SA, int xpa,
                  int *first, int *last, int depth) {
   int *i, *j;
   int t;
   int r;
 
   for(i = last - 2; first <= i; --i) {
-    for(t = *i, j = i + 1; 0 < (r = ss_compare(T, PA + t, PA + *j, depth));) {
+    for(t = *i, j = i + 1; 0 < (r = ss_compare(T, xpa + t, xpa + *j, depth));) {
       do { *(j - 1) = *j; } while((++j < last) && (*j < 0));
       if(last <= j) { break; }
     }
@@ -213,15 +213,15 @@ ss_insertionsort(byte *T, int *PA,
 
 private
 void
-ss_fixdown(byte[] T, int depth, int *PA,
+ss_fixdown(byte[] T, int depth, int[] SA, int xpa,
            int *HR, int i, int size) {
   int j, k;
   int v;
   int c, d, e;
 
-  for(v = HR[i], c = T[PA[v] + depth]; (j = 2 * i + 1) < size; HR[i] = HR[k], i = k) {
-    d = T[PA[HR[k = j++]] + depth];
-    if(d < (e = T[PA[HR[j]] + depth])) { k = j; d = e; }
+  for(v = HR[i], c = T[SA[xpa + v] + depth]; (j = 2 * i + 1) < size; HR[i] = HR[k], i = k) {
+    d = T[SA[xpa + HR[k = j++]] + depth];
+    if(d < (e = T[SA[xpa + HR[j]] + depth])) { k = j; d = e; }
     if(d <= c) { break; }
   }
   HR[i] = v;
@@ -230,21 +230,21 @@ ss_fixdown(byte[] T, int depth, int *PA,
 /* Simple top-down heapsort. */
 private
 void
-ss_heapsort(byte[] T, int depth, int *PA, int *HR, int size) {
+ss_heapsort(byte[] T, int depth, int[] SA, int xpa, int *HR, int size) {
   int i, m;
   int t;
 
   m = size;
   if((size % 2) == 0) {
     m--;
-    if(T[PA[HR[m / 2]] + depth] < T[PA[HR[m]] + depth]) { t = HR[m]; HR[m] = HR[m / 2]; HR[m / 2] = t; }
+    if(T[SA[xpa + HR[m / 2]] + depth] < T[SA[xpa + HR[m]] + depth]) { t = HR[m]; HR[m] = HR[m / 2]; HR[m / 2] = t; }
   }
 
-  for(i = m / 2 - 1; 0 <= i; --i) { ss_fixdown(T, depth, PA, HR, i, m); }
-  if((size % 2) == 0) { t = HR[0]; HR[0] = HR[m]; HR[m] = t; ss_fixdown(T, depth, PA, HR, 0, m); }
+  for(i = m / 2 - 1; 0 <= i; --i) { ss_fixdown(T, depth, SA, xpa, HR, i, m); }
+  if((size % 2) == 0) { t = HR[0]; HR[0] = HR[m]; HR[m] = t; ss_fixdown(T, depth, SA, xpa, HR, 0, m); }
   for(i = m - 1; 0 < i; --i) {
     t = HR[0], HR[0] = HR[i];
-    ss_fixdown(T, depth, PA, HR, 0, i);
+    ss_fixdown(T, depth, SA, xpa, HR, 0, i);
     HR[i] = t;
   }
 }
@@ -255,12 +255,12 @@ ss_heapsort(byte[] T, int depth, int *PA, int *HR, int size) {
 /* Returns the median of three elements. */
 private
 int *
-ss_median3(byte[] T, int depth, int *PA,
+ss_median3(byte[] T, int depth, int[] SA, int xpa,
            int *v1, int *v2, int *v3) {
   int *t;
-  if(T[PA[*v1] + depth] > T[PA[*v2] + depth]) { t = v1; v1 = v2; v2 = t; }
-  if(T[PA[*v2] + depth] > T[PA[*v3] + depth]) {
-    if(T[PA[*v1] + depth] > T[PA[*v3] + depth]) { return v1; }
+  if(T[SA[xpa + *v1] + depth] > T[SA[xpa + *v2] + depth]) { t = v1; v1 = v2; v2 = t; }
+  if(T[SA[xpa + *v2] + depth] > T[SA[xpa + *v3] + depth]) {
+    if(T[SA[xpa + *v1] + depth] > T[SA[xpa + *v3] + depth]) { return v1; }
     else { return v3; }
   }
   return v2;
@@ -269,22 +269,22 @@ ss_median3(byte[] T, int depth, int *PA,
 /* Returns the median of five elements. */
 private
 int *
-ss_median5(byte[] T, int depth, int *PA,
+ss_median5(byte[] T, int depth, int[] SA, int xpa,
            int *v1, int *v2, int *v3, int *v4, int *v5) {
   int *t;
-  if(T[PA[*v2] + depth] > T[PA[*v3] + depth]) { t = v2; v2 = v3; v3 = t; }
-  if(T[PA[*v4] + depth] > T[PA[*v5] + depth]) { t = v4; v4 = v5; v5 = t; }
-  if(T[PA[*v2] + depth] > T[PA[*v4] + depth]) { t = v2; v2 = v4; v4 = t; t = v3; v3 = v5; v5 = t; }
-  if(T[PA[*v1] + depth] > T[PA[*v3] + depth]) { t = v1; v1 = v3; v3 = t; }
-  if(T[PA[*v1] + depth] > T[PA[*v4] + depth]) { t = v1; v1 = v4; v4 = t; t = v3; v3 = v5; v5 = t; }
-  if(T[PA[*v3] + depth] > T[PA[*v4] + depth]) { return v4; }
+  if(T[SA[xpa + *v2] + depth] > T[SA[xpa + *v3] + depth]) { t = v2; v2 = v3; v3 = t; }
+  if(T[SA[xpa + *v4] + depth] > T[SA[xpa + *v5] + depth]) { t = v4; v4 = v5; v5 = t; }
+  if(T[SA[xpa + *v2] + depth] > T[SA[xpa + *v4] + depth]) { t = v2; v2 = v4; v4 = t; t = v3; v3 = v5; v5 = t; }
+  if(T[SA[xpa + *v1] + depth] > T[SA[xpa + *v3] + depth]) { t = v1; v1 = v3; v3 = t; }
+  if(T[SA[xpa + *v1] + depth] > T[SA[xpa + *v4] + depth]) { t = v1; v1 = v4; v4 = t; t = v3; v3 = v5; v5 = t; }
+  if(T[SA[xpa + *v3] + depth] > T[SA[xpa + *v4] + depth]) { return v4; }
   return v3;
 }
 
 /* Returns the pivot element. */
 private
 int *
-ss_pivot(byte[] T, int depth, int *PA, int *first, int *last) {
+ss_pivot(byte[] T, int depth, int[] SA, int xpa, int *first, int *last) {
   int *middle;
   int t;
 
@@ -293,17 +293,17 @@ ss_pivot(byte[] T, int depth, int *PA, int *first, int *last) {
 
   if(t <= 512) {
     if(t <= 32) {
-      return ss_median3(T, depth, PA, first, middle, last - 1);
+      return ss_median3(T, depth, SA, xpa, first, middle, last - 1);
     } else {
       t >>= 2;
-      return ss_median5(T, depth, PA, first, first + t, middle, last - 1 - t, last - 1);
+      return ss_median5(T, depth, SA, xpa, first, first + t, middle, last - 1 - t, last - 1);
     }
   }
   t >>= 3;
-  first  = ss_median3(T, depth, PA, first, first + t, first + (t << 1));
-  middle = ss_median3(T, depth, PA, middle - t, middle, middle + t);
-  last   = ss_median3(T, depth, PA, last - 1 - (t << 1), last - 1 - t, last - 1);
-  return ss_median3(T, depth, PA, first, middle, last);
+  first  = ss_median3(T, depth, SA, xpa, first, first + t, first + (t << 1));
+  middle = ss_median3(T, depth, SA, xpa, middle - t, middle, middle + t);
+  last   = ss_median3(T, depth, SA, xpa, last - 1 - (t << 1), last - 1 - t, last - 1);
+  return ss_median3(T, depth, SA, xpa, first, middle, last);
 }
 
 
@@ -312,13 +312,13 @@ ss_pivot(byte[] T, int depth, int *PA, int *first, int *last) {
 /* Binary partition for substrings. */
 private
 int *
-ss_partition(int *PA,
+ss_partition(int[] SA, int xpa,
                     int *first, int *last, int depth) {
   int *a, *b;
   int t;
   for(a = first - 1, b = last;;) {
-    for(; (++a < b) && ((PA[*a] + depth) >= (PA[*a + 1] + 1));) { *a = ~*a; }
-    for(; (a < --b) && ((PA[*b] + depth) <  (PA[*b + 1] + 1));) { }
+    for(; (++a < b) && ((SA[xpa + *a] + depth) >= (SA[xpa + *a + 1] + 1));) { *a = ~*a; }
+    for(; (a < --b) && ((SA[xpa + *b] + depth) <  (SA[xpa + *b + 1] + 1));) { }
     if(b <= a) { break; }
     t = ~*b;
     *b = *a;
@@ -331,7 +331,7 @@ ss_partition(int *PA,
 /* Multikey introsort for medium size groups. */
 private
 void
-ss_mintrosort(byte *T, int *PA,
+ss_mintrosort(byte *T, int[] SA, int xpa,
               int *first, int *last,
               int depth) {
   int[] stack = new int[4 * SS_MISORT_STACKSIZE];
@@ -344,7 +344,7 @@ ss_mintrosort(byte *T, int *PA,
   for(ssize = 0, limit = ss_ilg(last - first);;) {
 
     if((last - first) <= SS_INSERTIONSORT_THRESHOLD) {
-      if(1 < (last - first)) { ss_insertionsort(T, PA, first, last, depth); }
+      if(1 < (last - first)) { ss_insertionsort(T, SA, xpa, first, last, depth); }
       // STACK_POP(first, last, depth, limit)
       if(ssize == 0) return;
       first = stack[ssize - 4];
@@ -355,17 +355,17 @@ ss_mintrosort(byte *T, int *PA,
       continue;
     }
 
-    if(limit-- == 0) { ss_heapsort(T, depth, PA, first, last - first); }
+    if(limit-- == 0) { ss_heapsort(T, depth, SA, xpa, first, last - first); }
     if(limit < 0) {
-      for(a = first + 1, v = T[PA[*first] + depth]; a < last; ++a) {
-        if((x = T[PA[*a] + depth]) != v) {
+      for(a = first + 1, v = T[SA[xpa + *first] + depth]; a < last; ++a) {
+        if((x = T[SA[xpa + *a] + depth]) != v) {
           if(1 < (a - first)) { break; }
           v = x;
           first = a;
         }
       }
-      if(T[PA[*first] - 1 + depth] < v) {
-        first = ss_partition(PA, first, a, depth);
+      if(T[SA[xpa + *first] - 1 + depth] < v) {
+        first = ss_partition(SA, xpa, first, a, depth);
       }
       if((a - first) <= (last - a)) {
         if(1 < (a - first)) {
@@ -386,29 +386,29 @@ ss_mintrosort(byte *T, int *PA,
     }
 
     /* choose pivot */
-    a = ss_pivot(T, depth, PA, first, last);
-    v = T[PA[*a] + depth];
+    a = ss_pivot(T, depth, SA, xpa, first, last);
+    v = T[SA[xpa + *a] + depth];
     t = *first; *first = *a; *a = t;
 
     /* partition */
-    for(b = first; (++b < last) && ((x = T[PA[*b] + depth]) == v);) { }
+    for(b = first; (++b < last) && ((x = T[SA[xpa + *b] + depth]) == v);) { }
     if(((a = b) < last) && (x < v)) {
-      for(; (++b < last) && ((x = T[PA[*b] + depth]) <= v);) {
+      for(; (++b < last) && ((x = T[SA[xpa + *b] + depth]) <= v);) {
         if(x == v) { t = *b; *b = *a; *a = t; ++a; }
       }
     }
-    for(c = last; (b < --c) && ((x = T[PA[*c] + depth]) == v);) { }
+    for(c = last; (b < --c) && ((x = T[SA[xpa + *c] + depth]) == v);) { }
     if((b < (d = c)) && (x > v)) {
-      for(; (b < --c) && ((x = T[PA[*c] + depth]) >= v);) {
+      for(; (b < --c) && ((x = T[SA[xpa + *c] + depth]) >= v);) {
         if(x == v) { t = *c; *c = *d; *d = t; --d; }
       }
     }
     for(; b < c;) {
       t = *b; *b = *c; *c = t;
-      for(; (++b < c) && ((x = T[PA[*b] + depth]) <= v);) {
+      for(; (++b < c) && ((x = T[SA[xpa + *b] + depth]) <= v);) {
         if(x == v) { t = *b; *b = *a; *a = t; ++a; }
       }
-      for(; (b < --c) && ((x = T[PA[*c] + depth]) >= v);) {
+      for(; (b < --c) && ((x = T[SA[xpa + *c] + depth]) >= v);) {
         if(x == v) { t = *c; *c = *d; *d = t; --d; }
       }
     }
@@ -422,7 +422,7 @@ ss_mintrosort(byte *T, int *PA,
       for(e = b, f = last - s; 0 < s; --s, ++e, ++f) { t = *e; *e = *f; *f = t; }
 
       a = first + (b - a), c = last - (d - c);
-      b = (v <= T[PA[*a] - 1 + depth]) ? a : ss_partition(PA, a, c, depth);
+      b = (v <= T[SA[xpa + *a] - 1 + depth]) ? a : ss_partition(SA, xpa, a, c, depth);
 
       if((a - first) <= (last - c)) {
         if((last - c) <= (c - b)) {
@@ -455,8 +455,8 @@ ss_mintrosort(byte *T, int *PA,
       }
     } else {
       limit += 1;
-      if(T[PA[*first] - 1 + depth] < v) {
-        first = ss_partition(PA, first, last, depth);
+      if(T[SA[xpa + *first] - 1 + depth] < v) {
+        first = ss_partition(SA, xpa, first, last, depth);
         limit = ss_ilg(last - first);
       }
       depth += 1;
@@ -519,7 +519,7 @@ ss_rotate(int *first, int *middle, int *last) {
 
 private
 void
-ss_inplacemerge(byte *T, int *PA,
+ss_inplacemerge(byte *T, int[] SA, int xpa,
                 int *first, int *middle, int *last,
                 int depth) {
   int *p;
@@ -529,13 +529,13 @@ ss_inplacemerge(byte *T, int *PA,
   int x;
 
   for(;;) {
-    if(*(last - 1) < 0) { x = 1; p = PA + ~*(last - 1); }
-    else                { x = 0; p = PA +  *(last - 1); }
+    if(*(last - 1) < 0) { x = 1; p = xpa + ~*(last - 1); }
+    else                { x = 0; p = xpa +  *(last - 1); }
     for(a = first, len = middle - first, half = len >> 1, r = -1;
         0 < len;
         len = half, half >>= 1) {
       b = a + half;
-      q = ss_compare(T, PA + ((0 <= *b) ? *b : ~*b), p, depth);
+      q = ss_compare(T, xpa + ((0 <= *b) ? *b : ~*b), p, depth);
       if(q < 0) {
         a = b + 1;
         half -= (len & 1) ^ 1;
@@ -562,7 +562,7 @@ ss_inplacemerge(byte *T, int *PA,
 /* Merge-forward with internal buffer. */
 private
 void
-ss_mergeforward(byte *T, int *PA,
+ss_mergeforward(byte *T, int[] SA, int xpa,
                 int *first, int *middle, int *last,
                 int *buf, int depth) {
   int *a, *b, *c, *bufend;
@@ -573,7 +573,7 @@ ss_mergeforward(byte *T, int *PA,
   ss_blockswap(buf, first, middle - first);
 
   for(t = *(a = first), b = buf, c = middle;;) {
-    r = ss_compare(T, PA + *b, PA + *c, depth);
+    r = ss_compare(T, xpa + *b, xpa + *c, depth);
     if(r < 0) {
       do {
         *a++ = *b;
@@ -612,7 +612,7 @@ ss_mergeforward(byte *T, int *PA,
 /* Merge-backward with internal buffer. */
 private
 void
-ss_mergebackward(byte *T, int *PA,
+ss_mergebackward(byte *T, int[] SA, int xpa,
                  int *first, int *middle, int *last,
                  int *buf, int depth) {
   int *p1, *p2;
@@ -625,10 +625,10 @@ ss_mergebackward(byte *T, int *PA,
   ss_blockswap(buf, middle, last - middle);
 
   x = 0;
-  if(*bufend < 0)       { p1 = PA + ~*bufend; x |= 1; }
-  else                  { p1 = PA +  *bufend; }
-  if(*(middle - 1) < 0) { p2 = PA + ~*(middle - 1); x |= 2; }
-  else                  { p2 = PA +  *(middle - 1); }
+  if(*bufend < 0)       { p1 = xpa + ~*bufend; x |= 1; }
+  else                  { p1 = xpa +  *bufend; }
+  if(*(middle - 1) < 0) { p2 = xpa + ~*(middle - 1); x |= 2; }
+  else                  { p2 = xpa +  *(middle - 1); }
   for(t = *(a = last - 1), b = bufend, c = middle - 1;;) {
     r = ss_compare(T, p1, p2, depth);
     if(0 < r) {
@@ -636,8 +636,8 @@ ss_mergebackward(byte *T, int *PA,
       *a-- = *b;
       if(b <= buf) { *buf = t; break; }
       *b-- = *a;
-      if(*b < 0) { p1 = PA + ~*b; x |= 1; }
-      else       { p1 = PA +  *b; }
+      if(*b < 0) { p1 = xpa + ~*b; x |= 1; }
+      else       { p1 = xpa +  *b; }
     } else if(r < 0) {
       if(x & 2) { do { *a-- = *c, *c-- = *a; } while(*c < 0); x ^= 2; }
       *a-- = *c, *c-- = *a;
@@ -646,8 +646,8 @@ ss_mergebackward(byte *T, int *PA,
         *a = *b, *b = t;
         break;
       }
-      if(*c < 0) { p2 = PA + ~*c; x |= 2; }
-      else       { p2 = PA +  *c; }
+      if(*c < 0) { p2 = xpa + ~*c; x |= 2; }
+      else       { p2 = xpa +  *c; }
     } else {
       if(x & 1) { do { *a-- = *b, *b-- = *a; } while(*b < 0); x ^= 1; }
       *a-- = ~*b;
@@ -660,10 +660,10 @@ ss_mergebackward(byte *T, int *PA,
         *a = *b, *b = t;
         break;
       }
-      if(*b < 0) { p1 = PA + ~*b; x |= 1; }
-      else       { p1 = PA +  *b; }
-      if(*c < 0) { p2 = PA + ~*c; x |= 2; }
-      else       { p2 = PA +  *c; }
+      if(*b < 0) { p1 = xpa + ~*b; x |= 1; }
+      else       { p1 = xpa +  *b; }
+      if(*c < 0) { p2 = xpa + ~*c; x |= 2; }
+      else       { p2 = xpa +  *c; }
     }
   }
 }
@@ -671,17 +671,17 @@ ss_mergebackward(byte *T, int *PA,
 /* D&C based merge. */
 private
 void
-ss_swapmerge(byte *T, int *PA,
+ss_swapmerge(byte *T, int[] SA, int xpa,
              int *first, int *middle, int *last,
              int *buf, int bufsize, int depth) {
 #define GETIDX(a) ((0 <= (a)) ? (a) : (~(a)))
 #define MERGE_CHECK(a, b, c)\
   do {\
     if(((c) & 1) ||\
-       (((c) & 2) && (ss_compare(T, PA + GETIDX(*((a) - 1)), PA + *(a), depth) == 0))) {\
+       (((c) & 2) && (ss_compare(T, xpa + GETIDX(*((a) - 1)), xpa + *(a), depth) == 0))) {\
       *(a) = ~*(a);\
     }\
-    if(((c) & 4) && ((ss_compare(T, PA + GETIDX(*((b) - 1)), PA + *(b), depth) == 0))) {\
+    if(((c) & 4) && ((ss_compare(T, xpa + GETIDX(*((b) - 1)), xpa + *(b), depth) == 0))) {\
       *(b) = ~*(b);\
     }\
   } while(0)
@@ -694,7 +694,7 @@ ss_swapmerge(byte *T, int *PA,
   for(check = 0, ssize = 0;;) {
     if((last - middle) <= bufsize) {
       if((first < middle) && (middle < last)) {
-        ss_mergebackward(T, PA, first, middle, last, buf, depth);
+        ss_mergebackward(T, SA, xpa, first, middle, last, buf, depth);
       }
       MERGE_CHECK(first, last, check);
       // STACK_POP(first, middle, last, check)
@@ -709,7 +709,7 @@ ss_swapmerge(byte *T, int *PA,
 
     if((middle - first) <= bufsize) {
       if(first < middle) {
-        ss_mergeforward(T, PA, first, middle, last, buf, depth);
+        ss_mergeforward(T, SA, xpa, first, middle, last, buf, depth);
       }
       MERGE_CHECK(first, last, check);
       // STACK_POP(first, middle, last, check)
@@ -725,8 +725,8 @@ ss_swapmerge(byte *T, int *PA,
     for(m = 0, len = min(middle - first, last - middle), half = len >> 1;
         0 < len;
         len = half, half >>= 1) {
-      if(ss_compare(T, PA + GETIDX(*(middle + m + half)),
-                       PA + GETIDX(*(middle - m - half - 1)), depth) < 0) {
+      if(ss_compare(T, xpa + GETIDX(*(middle + m + half)),
+                       xpa + GETIDX(*(middle - m - half - 1)), depth) < 0) {
         m += half + 1;
         half -= (len & 1) ^ 1;
       }
@@ -756,7 +756,7 @@ ss_swapmerge(byte *T, int *PA,
         first = r, middle = rm, check = (next & 3) | (check & 4);
       }
     } else {
-      if(ss_compare(T, PA + GETIDX(*(middle - 1)), PA + *middle, depth) == 0) {
+      if(ss_compare(T, xpa + GETIDX(*(middle - 1)), xpa + *middle, depth) == 0) {
         *middle = ~*middle;
       }
       MERGE_CHECK(first, last, check);
@@ -779,7 +779,7 @@ ss_swapmerge(byte *T, int *PA,
 /* Substring sort */
 private
 void
-sssort(byte *T, int *PA,
+sssort(byte *T, int[] SA, int xpa,
        int *first, int *last,
        int *buf, int bufsize,
        int depth, int n, int lastsuffix) {
@@ -799,31 +799,31 @@ sssort(byte *T, int *PA,
     middle = last, limit = 0;
   }
   for(a = first, i = 0; SS_BLOCKSIZE < (middle - a); a += SS_BLOCKSIZE, ++i) {
-    ss_mintrosort(T, PA, a, a + SS_BLOCKSIZE, depth);
+    ss_mintrosort(T, SA, xpa, a, a + SS_BLOCKSIZE, depth);
     curbufsize = last - (a + SS_BLOCKSIZE);
     curbuf = a + SS_BLOCKSIZE;
     if(curbufsize <= bufsize) { curbufsize = bufsize, curbuf = buf; }
     for(b = a, k = SS_BLOCKSIZE, j = i; j & 1; b -= k, k <<= 1, j >>= 1) {
-      ss_swapmerge(T, PA, b - k, b, b + k, curbuf, curbufsize, depth);
+      ss_swapmerge(T, SA, xpa, b - k, b, b + k, curbuf, curbufsize, depth);
     }
   }
-  ss_mintrosort(T, PA, a, middle, depth);
+  ss_mintrosort(T, SA, xpa, a, middle, depth);
   for(k = SS_BLOCKSIZE; i != 0; k <<= 1, i >>= 1) {
     if(i & 1) {
-      ss_swapmerge(T, PA, a - k, a, middle, buf, bufsize, depth);
+      ss_swapmerge(T, SA, xpa, a - k, a, middle, buf, bufsize, depth);
       a -= k;
     }
   }
   if(limit != 0) {
-    ss_mintrosort(T, PA, middle, last, depth);
-    ss_inplacemerge(T, PA, first, middle, last, depth);
+    ss_mintrosort(T, SA, xpa, middle, last, depth);
+    ss_inplacemerge(T, SA, xpa, first, middle, last, depth);
   }
 
   if(lastsuffix != 0) {
     /* Insert last type B* suffix. */
     int r;
     for(a = first, i = *(first - 1), r = 1;
-        (a < last) && ((*a < 0) || (0 < (r = ss_compare_last(T, PA, PA + i, PA + *a, depth, n))));
+        (a < last) && ((*a < 0) || (0 < (r = ss_compare_last(T, SA, xpa, xpa + i, xpa + *a, depth, n))));
         ++a) {
       *(a - 1) = *a;
     }
@@ -1459,7 +1459,8 @@ private
 int
 sort_typeBstar(byte *T, int *SA,
                int *bucket, int n) {
-  int *PAb, *ISAb, *buf;
+  int xpa;
+  int *ISAb, *buf;
   int i, j, k, t, m, bufsize;
   int c0, c1;
   int flag;
@@ -1517,12 +1518,12 @@ note:
   }
 
   /* Sort the type B* suffixes by their first two characters. */
-  PAb = SA + n - m; ISAb = SA + m;
+  xpa = n - m; ISAb = SA + m;
   for(i = m - 2; 0 <= i; --i) {
-    t = PAb[i], c0 = T[t], c1 = T[t + 1];
+    t = SA[xpa + i], c0 = T[t], c1 = T[t + 1];
     SA[--BUCKET_BSTAR(c0, c1)] = i;
   }
-  t = PAb[m - 1], c0 = T[t], c1 = T[t + 1];
+  t = SA[xpa + m - 1], c0 = T[t], c1 = T[t + 1];
   SA[--BUCKET_BSTAR(c0, c1)] = m - 1;
 
   /* Sort the type B* substrings using sssort. */
@@ -1531,7 +1532,7 @@ note:
     for(c1 = ALPHABET_SIZE - 1; c0 < c1; j = i, --c1) {
       i = BUCKET_BSTAR(c0, c1);
       if(1 < (j - i)) {
-        sssort(T, PAb, SA + i, SA + j,
+        sssort(T, SA, xpa, SA + i, SA + j,
                 buf, bufsize, 2, n, *(SA + i) == (m - 1));
       }
     }
