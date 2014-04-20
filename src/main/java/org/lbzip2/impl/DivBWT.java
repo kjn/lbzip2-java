@@ -20,6 +20,8 @@
   along with lbzip2.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+import static java.lang.Math.*;
+
 /*- Settings -*/
 #define SS_INSERTIONSORT_THRESHOLD 8
 #define SS_BLOCKSIZE 1024
@@ -40,7 +42,6 @@ typedef int_fast32_t saint_t;
 # define TR_STACKSIZE (64)
 
 /*- Macros -*/
-# define MIN(_a, _b) (((_a) < (_b)) ? (_a) : (_b))
 #define STACK_PUSH(_a, _b, _c, _d)\
   do {\
     assert(ssize < STACK_SIZE);\
@@ -721,7 +722,7 @@ ss_swapmerge(const sauchar_t *T, const saidx_t *PA,
       continue;
     }
 
-    for(m = 0, len = MIN(middle - first, last - middle), half = len >> 1;
+    for(m = 0, len = min(middle - first, last - middle), half = len >> 1;
         0 < len;
         len = half, half >>= 1) {
       if(ss_compare(T, PA + GETIDX(*(middle + m + half)),
