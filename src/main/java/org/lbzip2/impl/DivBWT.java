@@ -28,12 +28,6 @@ import static java.lang.Math.*;
 #define ALPHABET_SIZE 256
 
 
-/*- Datatypes -*/
-typedef uint8_t sauchar_t;
-typedef int32_t saidx_t;
-typedef int_fast32_t saint_t;
-
-
 /* minstacksize = log(SS_BLOCKSIZE) / log(3) * 2 */
 # define SS_MISORT_STACKSIZE (16)
 # define SS_SMERGE_STACKSIZE (32)
@@ -75,7 +69,7 @@ typedef int_fast32_t saint_t;
 /* for trsort.c */
 #define TR_GETC(_p) (((_p) < (ISAn - ISAd)) ? ISAd[(_p)] : ISA[(ISAd - ISA + (_p)) % (ISAn - ISA)])
 /* for sssort.c and trsort.c */
-static const saint_t lg_table[256]= {
+static const int lg_table[256]= {
  -1,0,1,1,2,2,2,2,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,
   5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,
   6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,
@@ -92,15 +86,15 @@ static const saint_t lg_table[256]= {
 /*- Private Functions -*/
 
 static INLINE
-saint_t
-ss_ilg(saidx_t n) {
+int
+ss_ilg(int n) {
   return (n & 0xff00) ?
           8 + lg_table[(n >> 8) & 0xff] :
           0 + lg_table[(n >> 0) & 0xff];
 }
 
 
-static const saint_t sqq_table[256] = {
+static const int sqq_table[256] = {
   0,  16,  22,  27,  32,  35,  39,  42,  45,  48,  50,  53,  55,  57,  59,  61,
  64,  65,  67,  69,  71,  73,  75,  76,  78,  80,  81,  83,  84,  86,  87,  89,
  90,  91,  93,  94,  96,  97,  98,  99, 101, 102, 103, 104, 106, 107, 108, 109,
@@ -120,9 +114,9 @@ static const saint_t sqq_table[256] = {
 };
 
 static INLINE
-saidx_t
-ss_isqrt(saidx_t x) {
-  saidx_t y, e;
+int
+ss_isqrt(int x) {
+  int y, e;
 
   if(x >= (SS_BLOCKSIZE * SS_BLOCKSIZE)) { return SS_BLOCKSIZE; }
   e = (x & 0xffff0000) ?
@@ -151,11 +145,11 @@ ss_isqrt(saidx_t x) {
 
 /* Compares two suffixes. */
 static INLINE
-saint_t
-ss_compare(const sauchar_t *T,
-           const saidx_t *p1, const saidx_t *p2,
-           saidx_t depth) {
-  const sauchar_t *U1, *U2, *U1n, *U2n;
+int
+ss_compare(const byte *T,
+           const int *p1, const int *p2,
+           int depth) {
+  const byte *U1, *U2, *U1n, *U2n;
 
   for(U1 = T + depth + *p1,
       U2 = T + depth + *p2,
@@ -171,11 +165,11 @@ ss_compare(const sauchar_t *T,
 }
 
 static INLINE
-saint_t
-ss_compare_last(const sauchar_t *T, const saidx_t *PA,
-                const saidx_t *p1, const saidx_t *p2,
-                saidx_t depth, saidx_t size) {
-  const sauchar_t *U1, *U2, *U1n, *U2n;
+int
+ss_compare_last(const byte *T, const int *PA,
+                const int *p1, const int *p2,
+                int depth, int size) {
+  const byte *U1, *U2, *U1n, *U2n;
 
   for(U1 = T + depth + *p1,
       U2 = T + depth + *p2,
@@ -205,11 +199,11 @@ ss_compare_last(const sauchar_t *T, const saidx_t *PA,
 /* Insertionsort for small size groups */
 static
 void
-ss_insertionsort(const sauchar_t *T, const saidx_t *PA,
-                 saidx_t *first, saidx_t *last, saidx_t depth) {
-  saidx_t *i, *j;
-  saidx_t t;
-  saint_t r;
+ss_insertionsort(const byte *T, const int *PA,
+                 int *first, int *last, int depth) {
+  int *i, *j;
+  int t;
+  int r;
 
   for(i = last - 2; first <= i; --i) {
     for(t = *i, j = i + 1; 0 < (r = ss_compare(T, PA + t, PA + *j, depth));) {
@@ -226,11 +220,11 @@ ss_insertionsort(const sauchar_t *T, const saidx_t *PA,
 
 static INLINE
 void
-ss_fixdown(const sauchar_t *Td, const saidx_t *PA,
-           saidx_t *SA, saidx_t i, saidx_t size) {
-  saidx_t j, k;
-  saidx_t v;
-  saint_t c, d, e;
+ss_fixdown(const byte *Td, const int *PA,
+           int *SA, int i, int size) {
+  int j, k;
+  int v;
+  int c, d, e;
 
   for(v = SA[i], c = Td[PA[v]]; (j = 2 * i + 1) < size; SA[i] = SA[k], i = k) {
     d = Td[PA[SA[k = j++]]];
@@ -243,9 +237,9 @@ ss_fixdown(const sauchar_t *Td, const saidx_t *PA,
 /* Simple top-down heapsort. */
 static
 void
-ss_heapsort(const sauchar_t *Td, const saidx_t *PA, saidx_t *SA, saidx_t size) {
-  saidx_t i, m;
-  saidx_t t;
+ss_heapsort(const byte *Td, const int *PA, int *SA, int size) {
+  int i, m;
+  int t;
 
   m = size;
   if((size % 2) == 0) {
@@ -267,10 +261,10 @@ ss_heapsort(const sauchar_t *Td, const saidx_t *PA, saidx_t *SA, saidx_t size) {
 
 /* Returns the median of three elements. */
 static INLINE
-saidx_t *
-ss_median3(const sauchar_t *Td, const saidx_t *PA,
-           saidx_t *v1, saidx_t *v2, saidx_t *v3) {
-  saidx_t *t;
+int *
+ss_median3(const byte *Td, const int *PA,
+           int *v1, int *v2, int *v3) {
+  int *t;
   if(Td[PA[*v1]] > Td[PA[*v2]]) { t = v1; v1 = v2; v2 = t; }
   if(Td[PA[*v2]] > Td[PA[*v3]]) {
     if(Td[PA[*v1]] > Td[PA[*v3]]) { return v1; }
@@ -281,10 +275,10 @@ ss_median3(const sauchar_t *Td, const saidx_t *PA,
 
 /* Returns the median of five elements. */
 static INLINE
-saidx_t *
-ss_median5(const sauchar_t *Td, const saidx_t *PA,
-           saidx_t *v1, saidx_t *v2, saidx_t *v3, saidx_t *v4, saidx_t *v5) {
-  saidx_t *t;
+int *
+ss_median5(const byte *Td, const int *PA,
+           int *v1, int *v2, int *v3, int *v4, int *v5) {
+  int *t;
   if(Td[PA[*v2]] > Td[PA[*v3]]) { t = v2; v2 = v3; v3 = t; }
   if(Td[PA[*v4]] > Td[PA[*v5]]) { t = v4; v4 = v5; v5 = t; }
   if(Td[PA[*v2]] > Td[PA[*v4]]) { t = v2; v2 = v4; v4 = t; t = v3; v3 = v5; v5 = t; }
@@ -296,10 +290,10 @@ ss_median5(const sauchar_t *Td, const saidx_t *PA,
 
 /* Returns the pivot element. */
 static INLINE
-saidx_t *
-ss_pivot(const sauchar_t *Td, const saidx_t *PA, saidx_t *first, saidx_t *last) {
-  saidx_t *middle;
-  saidx_t t;
+int *
+ss_pivot(const byte *Td, const int *PA, int *first, int *last) {
+  int *middle;
+  int t;
 
   t = last - first;
   middle = first + t / 2;
@@ -324,11 +318,11 @@ ss_pivot(const sauchar_t *Td, const saidx_t *PA, saidx_t *first, saidx_t *last) 
 
 /* Binary partition for substrings. */
 static INLINE
-saidx_t *
-ss_partition(const saidx_t *PA,
-                    saidx_t *first, saidx_t *last, saidx_t depth) {
-  saidx_t *a, *b;
-  saidx_t t;
+int *
+ss_partition(const int *PA,
+                    int *first, int *last, int depth) {
+  int *a, *b;
+  int t;
   for(a = first - 1, b = last;;) {
     for(; (++a < b) && ((PA[*a] + depth) >= (PA[*a + 1] + 1));) { *a = ~*a; }
     for(; (a < --b) && ((PA[*b] + depth) <  (PA[*b + 1] + 1));) { }
@@ -344,17 +338,17 @@ ss_partition(const saidx_t *PA,
 /* Multikey introsort for medium size groups. */
 static
 void
-ss_mintrosort(const sauchar_t *T, const saidx_t *PA,
-              saidx_t *first, saidx_t *last,
-              saidx_t depth) {
+ss_mintrosort(const byte *T, const int *PA,
+              int *first, int *last,
+              int depth) {
 #define STACK_SIZE SS_MISORT_STACKSIZE
-  struct { saidx_t *a, *b, c; saint_t d; } stack[STACK_SIZE];
-  const sauchar_t *Td;
-  saidx_t *a, *b, *c, *d, *e, *f;
-  saidx_t s, t;
-  saint_t ssize;
-  saint_t limit;
-  saint_t v, x = 0;
+  struct { int *a, *b, c; int d; } stack[STACK_SIZE];
+  const byte *Td;
+  int *a, *b, *c, *d, *e, *f;
+  int s, t;
+  int ssize;
+  int limit;
+  int v, x = 0;
 
   for(ssize = 0, limit = ss_ilg(last - first);;) {
 
@@ -480,8 +474,8 @@ ss_mintrosort(const sauchar_t *T, const saidx_t *PA,
 
 static INLINE
 void
-ss_blockswap(saidx_t *a, saidx_t *b, saidx_t n) {
-  saidx_t t;
+ss_blockswap(int *a, int *b, int n) {
+  int t;
   for(; 0 < n; --n, ++a, ++b) {
     t = *a, *a = *b, *b = t;
   }
@@ -489,9 +483,9 @@ ss_blockswap(saidx_t *a, saidx_t *b, saidx_t n) {
 
 static INLINE
 void
-ss_rotate(saidx_t *first, saidx_t *middle, saidx_t *last) {
-  saidx_t *a, *b, t;
-  saidx_t l, r;
+ss_rotate(int *first, int *middle, int *last) {
+  int *a, *b, t;
+  int l, r;
   l = middle - first, r = last - middle;
   for(; (0 < l) && (0 < r);) {
     if(l == r) { ss_blockswap(first, middle, l); break; }
@@ -530,14 +524,14 @@ ss_rotate(saidx_t *first, saidx_t *middle, saidx_t *last) {
 
 static
 void
-ss_inplacemerge(const sauchar_t *T, const saidx_t *PA,
-                saidx_t *first, saidx_t *middle, saidx_t *last,
-                saidx_t depth) {
-  const saidx_t *p;
-  saidx_t *a, *b;
-  saidx_t len, half;
-  saint_t q, r;
-  saint_t x;
+ss_inplacemerge(const byte *T, const int *PA,
+                int *first, int *middle, int *last,
+                int depth) {
+  const int *p;
+  int *a, *b;
+  int len, half;
+  int q, r;
+  int x;
 
   for(;;) {
     if(*(last - 1) < 0) { x = 1; p = PA + ~*(last - 1); }
@@ -573,12 +567,12 @@ ss_inplacemerge(const sauchar_t *T, const saidx_t *PA,
 /* Merge-forward with internal buffer. */
 static
 void
-ss_mergeforward(const sauchar_t *T, const saidx_t *PA,
-                saidx_t *first, saidx_t *middle, saidx_t *last,
-                saidx_t *buf, saidx_t depth) {
-  saidx_t *a, *b, *c, *bufend;
-  saidx_t t;
-  saint_t r;
+ss_mergeforward(const byte *T, const int *PA,
+                int *first, int *middle, int *last,
+                int *buf, int depth) {
+  int *a, *b, *c, *bufend;
+  int t;
+  int r;
 
   bufend = buf + (middle - first) - 1;
   ss_blockswap(buf, first, middle - first);
@@ -623,14 +617,14 @@ ss_mergeforward(const sauchar_t *T, const saidx_t *PA,
 /* Merge-backward with internal buffer. */
 static
 void
-ss_mergebackward(const sauchar_t *T, const saidx_t *PA,
-                 saidx_t *first, saidx_t *middle, saidx_t *last,
-                 saidx_t *buf, saidx_t depth) {
-  const saidx_t *p1, *p2;
-  saidx_t *a, *b, *c, *bufend;
-  saidx_t t;
-  saint_t r;
-  saint_t x;
+ss_mergebackward(const byte *T, const int *PA,
+                 int *first, int *middle, int *last,
+                 int *buf, int depth) {
+  const int *p1, *p2;
+  int *a, *b, *c, *bufend;
+  int t;
+  int r;
+  int x;
 
   bufend = buf + (last - middle) - 1;
   ss_blockswap(buf, middle, last - middle);
@@ -682,9 +676,9 @@ ss_mergebackward(const sauchar_t *T, const saidx_t *PA,
 /* D&C based merge. */
 static
 void
-ss_swapmerge(const sauchar_t *T, const saidx_t *PA,
-             saidx_t *first, saidx_t *middle, saidx_t *last,
-             saidx_t *buf, saidx_t bufsize, saidx_t depth) {
+ss_swapmerge(const byte *T, const int *PA,
+             int *first, int *middle, int *last,
+             int *buf, int bufsize, int depth) {
 #define STACK_SIZE SS_SMERGE_STACKSIZE
 #define GETIDX(a) ((0 <= (a)) ? (a) : (~(a)))
 #define MERGE_CHECK(a, b, c)\
@@ -697,11 +691,11 @@ ss_swapmerge(const sauchar_t *T, const saidx_t *PA,
       *(b) = ~*(b);\
     }\
   } while(0)
-  struct { saidx_t *a, *b, *c; saint_t d; } stack[STACK_SIZE];
-  saidx_t *l, *r, *lm, *rm;
-  saidx_t m, len, half;
-  saint_t ssize;
-  saint_t check, next;
+  struct { int *a, *b, *c; int d; } stack[STACK_SIZE];
+  int *l, *r, *lm, *rm;
+  int m, len, half;
+  int ssize;
+  int check, next;
 
   for(check = 0, ssize = 0;;) {
     if((last - middle) <= bufsize) {
@@ -774,14 +768,14 @@ ss_swapmerge(const sauchar_t *T, const saidx_t *PA,
 /* Substring sort */
 static
 void
-sssort(const sauchar_t *T, const saidx_t *PA,
-       saidx_t *first, saidx_t *last,
-       saidx_t *buf, saidx_t bufsize,
-       saidx_t depth, saidx_t n, saint_t lastsuffix) {
-  saidx_t *a;
-  saidx_t *b, *middle, *curbuf;
-  saidx_t j, k, curbufsize, limit;
-  saidx_t i;
+sssort(const byte *T, const int *PA,
+       int *first, int *last,
+       int *buf, int bufsize,
+       int depth, int n, int lastsuffix) {
+  int *a;
+  int *b, *middle, *curbuf;
+  int j, k, curbufsize, limit;
+  int i;
 
   if(lastsuffix != 0) { ++first; }
 
@@ -816,7 +810,7 @@ sssort(const sauchar_t *T, const saidx_t *PA,
 
   if(lastsuffix != 0) {
     /* Insert last type B* suffix. */
-    saint_t r;
+    int r;
     for(a = first, i = *(first - 1), r = 1;
         (a < last) && ((*a < 0) || (0 < (r = ss_compare_last(T, PA, PA + i, PA + *a, depth, n))));
         ++a) {
@@ -833,8 +827,8 @@ sssort(const sauchar_t *T, const saidx_t *PA,
 /*- Private Functions -*/
 
 static INLINE
-saint_t
-tr_ilg(saidx_t n) {
+int
+tr_ilg(int n) {
   return (n & 0xffff0000) ?
           ((n & 0xff000000) ?
             24 + lg_table[(n >> 24) & 0xff] :
@@ -850,10 +844,10 @@ tr_ilg(saidx_t n) {
 /* Simple insertionsort for small size groups. */
 static
 void
-tr_insertionsort(const saidx_t *ISA, const saidx_t *ISAd, const saidx_t *ISAn,
-                 saidx_t *first, saidx_t *last) {
-  saidx_t *a, *b;
-  saidx_t t, r;
+tr_insertionsort(const int *ISA, const int *ISAd, const int *ISAn,
+                 int *first, int *last) {
+  int *a, *b;
+  int t, r;
 
   for(a = first + 1; a < last; ++a) {
     for(t = *a, b = a - 1; 0 > (r = TR_GETC(t) - TR_GETC(*b));) {
@@ -870,11 +864,11 @@ tr_insertionsort(const saidx_t *ISA, const saidx_t *ISAd, const saidx_t *ISAn,
 
 static INLINE
 void
-tr_fixdown(const saidx_t *ISA, const saidx_t *ISAd, const saidx_t *ISAn,
-           saidx_t *SA, saidx_t i, saidx_t size) {
-  saidx_t j, k;
-  saidx_t v;
-  saidx_t c, d, e;
+tr_fixdown(const int *ISA, const int *ISAd, const int *ISAn,
+           int *SA, int i, int size) {
+  int j, k;
+  int v;
+  int c, d, e;
 
   for(v = SA[i], c = TR_GETC(v); (j = 2 * i + 1) < size; SA[i] = SA[k], i = k) {
     k = j++;
@@ -888,10 +882,10 @@ tr_fixdown(const saidx_t *ISA, const saidx_t *ISAd, const saidx_t *ISAn,
 /* Simple top-down heapsort. */
 static
 void
-tr_heapsort(const saidx_t *ISA, const saidx_t *ISAd, const saidx_t *ISAn,
-            saidx_t *SA, saidx_t size) {
-  saidx_t i, m;
-  saidx_t t;
+tr_heapsort(const int *ISA, const int *ISAd, const int *ISAn,
+            int *SA, int size) {
+  int i, m;
+  int t;
 
   m = size;
   if((size % 2) == 0) {
@@ -913,10 +907,10 @@ tr_heapsort(const saidx_t *ISA, const saidx_t *ISAd, const saidx_t *ISAn,
 
 /* Returns the median of three elements. */
 static INLINE
-saidx_t *
-tr_median3(const saidx_t *ISA, const saidx_t *ISAd, const saidx_t *ISAn,
-           saidx_t *v1, saidx_t *v2, saidx_t *v3) {
-  saidx_t *t;
+int *
+tr_median3(const int *ISA, const int *ISAd, const int *ISAn,
+           int *v1, int *v2, int *v3) {
+  int *t;
   if(TR_GETC(*v1) > TR_GETC(*v2)) { t = v1; v1 = v2; v2 = t; }
   if(TR_GETC(*v2) > TR_GETC(*v3)) {
     if(TR_GETC(*v1) > TR_GETC(*v3)) { return v1; }
@@ -927,10 +921,10 @@ tr_median3(const saidx_t *ISA, const saidx_t *ISAd, const saidx_t *ISAn,
 
 /* Returns the median of five elements. */
 static INLINE
-saidx_t *
-tr_median5(const saidx_t *ISA, const saidx_t *ISAd, const saidx_t *ISAn,
-           saidx_t *v1, saidx_t *v2, saidx_t *v3, saidx_t *v4, saidx_t *v5) {
-  saidx_t *t;
+int *
+tr_median5(const int *ISA, const int *ISAd, const int *ISAn,
+           int *v1, int *v2, int *v3, int *v4, int *v5) {
+  int *t;
   if(TR_GETC(*v2) > TR_GETC(*v3)) { t = v2; v2 = v3; v3 = t; }
   if(TR_GETC(*v4) > TR_GETC(*v5)) { t = v4; v4 = v5; v5 = t; }
   if(TR_GETC(*v2) > TR_GETC(*v4)) { t = v2; v2 = v4; v4 = t; t = v3; v3 = v5; v5 = t; }
@@ -942,11 +936,11 @@ tr_median5(const saidx_t *ISA, const saidx_t *ISAd, const saidx_t *ISAn,
 
 /* Returns the pivot element. */
 static INLINE
-saidx_t *
-tr_pivot(const saidx_t *ISA, const saidx_t *ISAd, const saidx_t *ISAn,
-         saidx_t *first, saidx_t *last) {
-  saidx_t *middle;
-  saidx_t t;
+int *
+tr_pivot(const int *ISA, const int *ISAd, const int *ISAn,
+         int *first, int *last) {
+  int *middle;
+  int t;
 
   t = last - first;
   middle = first + t / 2;
@@ -971,22 +965,22 @@ tr_pivot(const saidx_t *ISA, const saidx_t *ISAd, const saidx_t *ISAn,
 
 typedef struct _trbudget_t trbudget_t;
 struct _trbudget_t {
-  saidx_t chance;
-  saidx_t remain;
-  saidx_t incval;
-  saidx_t count;
+  int chance;
+  int remain;
+  int incval;
+  int count;
 };
 
 static INLINE
 void
-trbudget_init(trbudget_t *budget, saidx_t chance, saidx_t incval) {
+trbudget_init(trbudget_t *budget, int chance, int incval) {
   budget->chance = chance;
   budget->remain = budget->incval = incval;
 }
 
 static INLINE
-saint_t
-trbudget_check(trbudget_t *budget, saidx_t size) {
+int
+trbudget_check(trbudget_t *budget, int size) {
   if(size <= budget->remain) { budget->remain -= size; return 1; }
   if(budget->chance == 0) { budget->count += size; return 0; }
   budget->remain += budget->incval - size;
@@ -999,12 +993,12 @@ trbudget_check(trbudget_t *budget, saidx_t size) {
 
 static INLINE
 void
-tr_partition(const saidx_t *ISA, const saidx_t *ISAd, const saidx_t *ISAn,
-             saidx_t *first, saidx_t *middle, saidx_t *last,
-             saidx_t **pa, saidx_t **pb, saidx_t v) {
-  saidx_t *a, *b, *c, *d, *e, *f;
-  saidx_t t, s;
-  saidx_t x = 0;
+tr_partition(const int *ISA, const int *ISAd, const int *ISAn,
+             int *first, int *middle, int *last,
+             int **pa, int **pb, int v) {
+  int *a, *b, *c, *d, *e, *f;
+  int t, s;
+  int x = 0;
 
   for(b = middle - 1; (++b < last) && ((x = TR_GETC(*b)) == v);) { }
   if(((a = b) < last) && (x < v)) {
@@ -1041,13 +1035,13 @@ tr_partition(const saidx_t *ISA, const saidx_t *ISAd, const saidx_t *ISAn,
 
 static
 void
-tr_copy(saidx_t *ISA, const saidx_t *ISAn, const saidx_t *SA,
-        saidx_t *first, saidx_t *a, saidx_t *b, saidx_t *last,
-        saidx_t depth) {
+tr_copy(int *ISA, const int *ISAn, const int *SA,
+        int *first, int *a, int *b, int *last,
+        int depth) {
   /* sort suffixes of middle partition
      by using sorted order of suffixes of left and right partition. */
-  saidx_t *c, *d, *e;
-  saidx_t s, v;
+  int *c, *d, *e;
+  int s, v;
 
   v = b - SA - 1;
   for(c = first, d = a - 1; c <= d; ++c) {
@@ -1068,12 +1062,12 @@ tr_copy(saidx_t *ISA, const saidx_t *ISAn, const saidx_t *SA,
 
 static
 void
-tr_partialcopy(saidx_t *ISA, const saidx_t *ISAn, const saidx_t *SA,
-               saidx_t *first, saidx_t *a, saidx_t *b, saidx_t *last,
-               saidx_t depth) {
-  saidx_t *c, *d, *e;
-  saidx_t s, v, t;
-  saidx_t rank, lastrank, newrank = -1;
+tr_partialcopy(int *ISA, const int *ISAn, const int *SA,
+               int *first, int *a, int *b, int *last,
+               int depth) {
+  int *c, *d, *e;
+  int s, v, t;
+  int rank, lastrank, newrank = -1;
 
   v = b - SA - 1;
   lastrank = -1;
@@ -1110,17 +1104,17 @@ tr_partialcopy(saidx_t *ISA, const saidx_t *ISAn, const saidx_t *SA,
 
 static
 void
-tr_introsort(saidx_t *ISA, const saidx_t *ISAd, const saidx_t *ISAn,
-             saidx_t *SA, saidx_t *first, saidx_t *last,
+tr_introsort(int *ISA, const int *ISAd, const int *ISAn,
+             int *SA, int *first, int *last,
              trbudget_t *budget) {
 #define STACK_SIZE TR_STACKSIZE
-  struct { const saidx_t *a; saidx_t *b, *c; saint_t d, e; }stack[STACK_SIZE];
-  saidx_t *a, *b, *c;
-  saidx_t t;
-  saidx_t v, x = 0;
-  saidx_t incr = ISAd - ISA;
-  saint_t limit, next;
-  saint_t ssize, trlink = -1;
+  struct { const int *a; int *b, *c; int d, e; }stack[STACK_SIZE];
+  int *a, *b, *c;
+  int t;
+  int v, x = 0;
+  int incr = ISAd - ISA;
+  int limit, next;
+  int ssize, trlink = -1;
 
   for(ssize = 0, limit = tr_ilg(last - first);;) {
     assert((ISAd < ISAn) || (limit == -3));
@@ -1340,11 +1334,11 @@ tr_introsort(saidx_t *ISA, const saidx_t *ISAd, const saidx_t *ISAn,
 /* Tandem repeat sort */
 static
 void
-trsort(saidx_t *ISA, saidx_t *SA, saidx_t n, saidx_t depth) {
-  saidx_t *ISAd;
-  saidx_t *first, *last, *a;
+trsort(int *ISA, int *SA, int n, int depth) {
+  int *ISAd;
+  int *first, *last, *a;
   trbudget_t budget;
-  saidx_t t, skip, unsorted;
+  int t, skip, unsorted;
 
   if (-n >= *SA) { return; }
   trbudget_init(&budget, tr_ilg(n) * 2 / 3, n);
@@ -1392,16 +1386,16 @@ trsort(saidx_t *ISA, saidx_t *SA, saidx_t n, saidx_t depth) {
 
 /* Sorts suffixes of type B*. */
 static
-saidx_t
-sort_typeBstar(const sauchar_t *T, saidx_t *SA,
-               saidx_t *bucket, saidx_t n) {
-  saidx_t *PAb, *ISAb, *buf;
-  saidx_t i, j, k, t, m, bufsize;
-  saint_t c0, c1;
+int
+sort_typeBstar(const byte *T, int *SA,
+               int *bucket, int n) {
+  int *PAb, *ISAb, *buf;
+  int i, j, k, t, m, bufsize;
+  int c0, c1;
   int flag;
 
   /* Initialize bucket arrays. */
-  bzero(bucket, (ALPHABET_SIZE + 1) * ALPHABET_SIZE * sizeof(saidx_t));
+  bzero(bucket, (ALPHABET_SIZE + 1) * ALPHABET_SIZE * sizeof(int));
 
   /* Count the number of occurrences of the first one or two characters of each
      type A, B and B* suffix. Moreover, store the beginning position of all
@@ -1504,7 +1498,7 @@ note:
       SA[ISAb[--j]] = ((1 < (t - i))) ? t : ~t;
     }
   }
-  if(SA[ISAb[0]] == ~((saidx_t)0)) {
+  if(SA[ISAb[0]] == ~((int)0)) {
     /* check last type */
     if(T[n - 1] <= T[0]) { /* is type B? */
       SA[ISAb[0]] = 0;
@@ -1538,12 +1532,12 @@ note:
 }
 
 static
-saidx_t
-construct_BWT(const sauchar_t *T, saidx_t *SA,
-              saidx_t *bucket, saidx_t n) {
-  saidx_t *i, *j, *k;
-  saidx_t s, t, orig = -10;
-  saint_t c0, c1, c2;
+int
+construct_BWT(const byte *T, int *SA,
+              int *bucket, int n) {
+  int *i, *j, *k;
+  int s, t, orig = -10;
+  int c0, c1, c2;
 
   /* Construct the sorted order of type B suffixes by using
      the sorted order of type B* suffixes. */
@@ -1561,7 +1555,7 @@ construct_BWT(const sauchar_t *T, saidx_t *SA,
         else { t = n - 1; orig = j - SA; }
         assert(T[t] <= T[s]);
         c0 = T[t];
-        *j = ~((saidx_t)c0);
+        *j = ~((int)c0);
         if(c0 != c2) {
           if(0 <= c2) { BUCKET_B(c2, c1) = k - SA; }
           k = SA + BUCKET_B(c2 = c0, c1);
@@ -1593,7 +1587,7 @@ construct_BWT(const sauchar_t *T, saidx_t *SA,
       if(t != 0) { c1 = T[t - 1]; }
       else { c1 = T[n - 1]; orig = k - SA; }
       assert(i <= k);
-      *k++ = (c1 < c2) ? ~((saidx_t)c1) : t;
+      *k++ = (c1 < c2) ? ~((int)c1) : t;
     } else {
       *i = ~s;
     }
@@ -1609,9 +1603,9 @@ construct_BWT(const sauchar_t *T, saidx_t *SA,
 
 /*- Function -*/
 
-saidx_t
-divbwt(sauchar_t *T, saidx_t *SA, saidx_t *bucket, saidx_t n) {
-  saidx_t m, pidx, i;
+int
+divbwt(byte *T, int *SA, int *bucket, int n) {
+  int m, pidx, i;
 
   /* Check arguments. */
   assert(n > 0);
