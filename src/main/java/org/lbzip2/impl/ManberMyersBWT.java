@@ -15,6 +15,9 @@
  */
 package org.lbzip2.impl;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * A BWT implementation based on the original Manber-Myers algorithm.
  * <p>
@@ -25,8 +28,12 @@ package org.lbzip2.impl;
 class ManberMyersBWT
     implements BWT
 {
+    private final Logger logger = LoggerFactory.getLogger( ManberMyersBWT.class );
+
     public int transform( byte[] D, int[] P, int n )
     {
+        logger.debug( "Manber-Myers BWT, block size {}", n );
+
         int[] R, C;
         boolean[] A, B;
         int i, j, d, e, h;
@@ -35,6 +42,8 @@ class ManberMyersBWT
         B = new boolean[n + 1];
         C = new int[Math.max( n, 256 )];
         R = new int[n];
+
+        logger.trace( "  Bucket sorting..." );
 
         for ( i = 0; i < 256; i++ )
             C[i] = 0;
@@ -53,6 +62,8 @@ class ManberMyersBWT
 
         for ( h = 1; h < n; h *= 2 )
         {
+            logger.trace( "  Suffix sorting at depth {}...", h );
+
             for ( i = 0; i < n; i = j )
             {
                 C[i] = i;
@@ -95,6 +106,8 @@ class ManberMyersBWT
                 B[i] |= A[i];
             }
         }
+
+        logger.trace( "  Constructing BWT..." );
 
         j = R[0];
         P[j] = n;

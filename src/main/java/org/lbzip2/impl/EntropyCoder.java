@@ -594,6 +594,8 @@ class EntropyCoder
             {
                 if ( ( not_seen & ( 1 << t ) ) != 0 )
                 {
+                    logger.trace( "Final tree {}:", nt );
+
                     not_seen -= 1 << t;
                     tmap_old2new[t] = nt;
                     tmap_new2old[nt] = t;
