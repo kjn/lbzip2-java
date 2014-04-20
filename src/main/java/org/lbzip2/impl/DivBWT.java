@@ -139,15 +139,15 @@ ss_isqrt(int x) {
 /* Compares two suffixes. */
 private
 int
-ss_compare(byte[] T,
-           int *p1, int *p2,
+ss_compare(byte[] T, int[] SA,
+           int p1, int p2,
            int depth) {
   int U1, U2, U1n, U2n;
 
-  for(U1 = depth + *p1,
-      U2 = depth + *p2,
-      U1n = *(p1 + 1) + 2,
-      U2n = *(p2 + 1) + 2;
+  for(U1 = depth + SA[p1],
+      U2 = depth + SA[p2],
+      U1n = SA[p1 + 1] + 2,
+      U2n = SA[p2 + 1] + 2;
       (U1 < U1n) && (U2 < U2n) && (T[U1] == T[U2]);
       ++U1, ++U2) {
   }
@@ -160,14 +160,14 @@ ss_compare(byte[] T,
 private
 int
 ss_compare_last(byte[] T, int[] SA, int xpa,
-                int *p1, int *p2,
+                int p1, int p2,
                 int depth, int size) {
   int U1, U2, U1n, U2n;
 
-  for(U1 = depth + *p1,
-      U2 = depth + *p2,
+  for(U1 = depth + SA[p1],
+      U2 = depth + SA[p2],
       U1n = size,
-      U2n = *(p2 + 1) + 2;
+      U2n = SA[p2 + 1] + 2;
       (U1 < U1n) && (U2 < U2n) && (T[U1] == T[U2]);
       ++U1, ++U2) {
   }
@@ -193,18 +193,18 @@ ss_compare_last(byte[] T, int[] SA, int xpa,
 private
 void
 ss_insertionsort(byte[] T, int[] SA, int xpa,
-                 int *first, int *last, int depth) {
-  int *i, *j;
+                 int first, int last, int depth) {
+  int i, j;
   int t;
   int r;
 
   for(i = last - 2; first <= i; --i) {
-    for(t = *i, j = i + 1; 0 < (r = ss_compare(T, xpa + t, xpa + *j, depth));) {
-      do { *(j - 1) = *j; } while((++j < last) && (*j < 0));
+    for(t = SA[i], j = i + 1; 0 < (r = ss_compare(T, SA, xpa + t, xpa + SA[j], depth));) {
+      do { SA[j - 1] = SA[j]; } while((++j < last) && (SA[j] < 0));
       if(last <= j) { break; }
     }
-    if(r == 0) { *j = ~*j; }
-    *(j - 1) = t;
+    if(r == 0) { SA[j] = ~SA[j]; }
+    SA[j - 1] = t;
   }
 }
 
@@ -214,7 +214,7 @@ ss_insertionsort(byte[] T, int[] SA, int xpa,
 private
 void
 ss_fixdown(byte[] T, int depth, int[] SA, int xpa,
-           int *HR, int i, int size) {
+           int HR, int i, int size) {
   int j, k;
   int v;
   int c, d, e;
@@ -230,7 +230,7 @@ ss_fixdown(byte[] T, int depth, int[] SA, int xpa,
 /* Simple top-down heapsort. */
 private
 void
-ss_heapsort(byte[] T, int depth, int[] SA, int xpa, int *HR, int size) {
+ss_heapsort(byte[] T, int depth, int[] SA, int xpa, int HR, int size) {
   int i, m;
   int t;
 
@@ -254,10 +254,10 @@ ss_heapsort(byte[] T, int depth, int[] SA, int xpa, int *HR, int size) {
 
 /* Returns the median of three elements. */
 private
-int *
+int
 ss_median3(byte[] T, int depth, int[] SA, int xpa,
-           int *v1, int *v2, int *v3) {
-  int *t;
+           int v1, int v2, int v3) {
+  int t;
   if(T[SA[xpa + *v1] + depth] > T[SA[xpa + *v2] + depth]) { t = v1; v1 = v2; v2 = t; }
   if(T[SA[xpa + *v2] + depth] > T[SA[xpa + *v3] + depth]) {
     if(T[SA[xpa + *v1] + depth] > T[SA[xpa + *v3] + depth]) { return v1; }
@@ -268,10 +268,10 @@ ss_median3(byte[] T, int depth, int[] SA, int xpa,
 
 /* Returns the median of five elements. */
 private
-int *
+int
 ss_median5(byte[] T, int depth, int[] SA, int xpa,
-           int *v1, int *v2, int *v3, int *v4, int *v5) {
-  int *t;
+           int v1, int v2, int v3, int v4, int v5) {
+  int t;
   if(T[SA[xpa + *v2] + depth] > T[SA[xpa + *v3] + depth]) { t = v2; v2 = v3; v3 = t; }
   if(T[SA[xpa + *v4] + depth] > T[SA[xpa + *v5] + depth]) { t = v4; v4 = v5; v5 = t; }
   if(T[SA[xpa + *v2] + depth] > T[SA[xpa + *v4] + depth]) { t = v2; v2 = v4; v4 = t; t = v3; v3 = v5; v5 = t; }
@@ -283,9 +283,9 @@ ss_median5(byte[] T, int depth, int[] SA, int xpa,
 
 /* Returns the pivot element. */
 private
-int *
-ss_pivot(byte[] T, int depth, int[] SA, int xpa, int *first, int *last) {
-  int *middle;
+int
+ss_pivot(byte[] T, int depth, int[] SA, int xpa, int first, int last) {
+  int middle;
   int t;
 
   t = last - first;
@@ -311,10 +311,10 @@ ss_pivot(byte[] T, int depth, int[] SA, int xpa, int *first, int *last) {
 
 /* Binary partition for substrings. */
 private
-int *
+int
 ss_partition(int[] SA, int xpa,
-                    int *first, int *last, int depth) {
-  int *a, *b;
+                    int first, int last, int depth) {
+  int a, b;
   int t;
   for(a = first - 1, b = last;;) {
     for(; (++a < b) && ((SA[xpa + *a] + depth) >= (SA[xpa + *a + 1] + 1));) { *a = ~*a; }
@@ -332,10 +332,10 @@ ss_partition(int[] SA, int xpa,
 private
 void
 ss_mintrosort(byte[] T, int[] SA, int xpa,
-              int *first, int *last,
+              int first, int last,
               int depth) {
   int[] stack = new int[4 * SS_MISORT_STACKSIZE];
-  int *a, *b, *c, *d, *e, *f;
+  int a, b, c, d, e, f;
   int s, t;
   int ssize;
   int limit;
@@ -469,7 +469,7 @@ ss_mintrosort(byte[] T, int[] SA, int xpa,
 
 private
 void
-ss_blockswap(int *a, int *b, int n) {
+ss_blockswap(int a, int b, int n) {
   int t;
   for(; 0 < n; --n, ++a, ++b) {
     t = *a, *a = *b, *b = t;
@@ -478,8 +478,8 @@ ss_blockswap(int *a, int *b, int n) {
 
 private
 void
-ss_rotate(int *first, int *middle, int *last) {
-  int *a, *b, t;
+ss_rotate(int first, int middle, int last) {
+  int a, b, t;
   int l, r;
   l = middle - first, r = last - middle;
   for(; (0 < l) && (0 < r);) {
@@ -520,10 +520,10 @@ ss_rotate(int *first, int *middle, int *last) {
 private
 void
 ss_inplacemerge(byte[] T, int[] SA, int xpa,
-                int *first, int *middle, int *last,
+                int first, int middle, int last,
                 int depth) {
-  int *p;
-  int *a, *b;
+  int p;
+  int a, b;
   int len, half;
   int q, r;
   int x;
@@ -535,7 +535,7 @@ ss_inplacemerge(byte[] T, int[] SA, int xpa,
         0 < len;
         len = half, half >>= 1) {
       b = a + half;
-      q = ss_compare(T, xpa + ((0 <= *b) ? *b : ~*b), p, depth);
+      q = ss_compare(T, SA, xpa + ((0 <= *b) ? *b : ~*b), p, depth);
       if(q < 0) {
         a = b + 1;
         half -= (len & 1) ^ 1;
@@ -563,9 +563,9 @@ ss_inplacemerge(byte[] T, int[] SA, int xpa,
 private
 void
 ss_mergeforward(byte[] T, int[] SA, int xpa,
-                int *first, int *middle, int *last,
-                int *buf, int depth) {
-  int *a, *b, *c, *bufend;
+                int first, int middle, int last,
+                int buf, int depth) {
+  int a, b, c, bufend;
   int t;
   int r;
 
@@ -573,7 +573,7 @@ ss_mergeforward(byte[] T, int[] SA, int xpa,
   ss_blockswap(buf, first, middle - first);
 
   for(t = *(a = first), b = buf, c = middle;;) {
-    r = ss_compare(T, xpa + *b, xpa + *c, depth);
+    r = ss_compare(T, SA, xpa + *b, xpa + *c, depth);
     if(r < 0) {
       do {
         *a++ = *b;
@@ -613,10 +613,10 @@ ss_mergeforward(byte[] T, int[] SA, int xpa,
 private
 void
 ss_mergebackward(byte[] T, int[] SA, int xpa,
-                 int *first, int *middle, int *last,
-                 int *buf, int depth) {
-  int *p1, *p2;
-  int *a, *b, *c, *bufend;
+                 int first, int middle, int last,
+                 int buf, int depth) {
+  int p1, p2;
+  int a, b, c, bufend;
   int t;
   int r;
   int x;
@@ -630,7 +630,7 @@ ss_mergebackward(byte[] T, int[] SA, int xpa,
   if(*(middle - 1) < 0) { p2 = xpa + ~*(middle - 1); x |= 2; }
   else                  { p2 = xpa +  *(middle - 1); }
   for(t = *(a = last - 1), b = bufend, c = middle - 1;;) {
-    r = ss_compare(T, p1, p2, depth);
+    r = ss_compare(T, SA, p1, p2, depth);
     if(0 < r) {
       if(x & 1) { do { *a-- = *b, *b-- = *a; } while(*b < 0); x ^= 1; }
       *a-- = *b;
@@ -672,21 +672,21 @@ ss_mergebackward(byte[] T, int[] SA, int xpa,
 private
 void
 ss_swapmerge(byte[] T, int[] SA, int xpa,
-             int *first, int *middle, int *last,
-             int *buf, int bufsize, int depth) {
+             int first, int middle, int last,
+             int buf, int bufsize, int depth) {
 #define GETIDX(a) ((0 <= (a)) ? (a) : (~(a)))
 #define MERGE_CHECK(a, b, c)\
   do {\
     if(((c) & 1) ||\
-       (((c) & 2) && (ss_compare(T, xpa + GETIDX(*((a) - 1)), xpa + *(a), depth) == 0))) {\
+       (((c) & 2) && (ss_compare(T, SA, xpa + GETIDX(*((a) - 1)), xpa + *(a), depth) == 0))) {\
       *(a) = ~*(a);\
     }\
-    if(((c) & 4) && ((ss_compare(T, xpa + GETIDX(*((b) - 1)), xpa + *(b), depth) == 0))) {\
+    if(((c) & 4) && ((ss_compare(T, SA, xpa + GETIDX(*((b) - 1)), xpa + *(b), depth) == 0))) {\
       *(b) = ~*(b);\
     }\
   } while(0)
   int[] stack = new int[4 * SS_SMERGE_STACKSIZE];
-  int *l, *r, *lm, *rm;
+  int l, r, lm, rm;
   int m, len, half;
   int ssize;
   int check, next;
@@ -725,7 +725,7 @@ ss_swapmerge(byte[] T, int[] SA, int xpa,
     for(m = 0, len = min(middle - first, last - middle), half = len >> 1;
         0 < len;
         len = half, half >>= 1) {
-      if(ss_compare(T, xpa + GETIDX(*(middle + m + half)),
+      if(ss_compare(T, SA, xpa + GETIDX(*(middle + m + half)),
                        xpa + GETIDX(*(middle - m - half - 1)), depth) < 0) {
         m += half + 1;
         half -= (len & 1) ^ 1;
@@ -756,7 +756,7 @@ ss_swapmerge(byte[] T, int[] SA, int xpa,
         first = r, middle = rm, check = (next & 3) | (check & 4);
       }
     } else {
-      if(ss_compare(T, xpa + GETIDX(*(middle - 1)), xpa + *middle, depth) == 0) {
+      if(ss_compare(T, SA, xpa + GETIDX(*(middle - 1)), xpa + *middle, depth) == 0) {
         *middle = ~*middle;
       }
       MERGE_CHECK(first, last, check);
@@ -780,11 +780,11 @@ ss_swapmerge(byte[] T, int[] SA, int xpa,
 private
 void
 sssort(byte[] T, int[] SA, int xpa,
-       int *first, int *last,
-       int *buf, int bufsize,
+       int first, int last,
+       int buf, int bufsize,
        int depth, int n, int lastsuffix) {
-  int *a;
-  int *b, *middle, *curbuf;
+  int a;
+  int b, middle, curbuf;
   int j, k, curbufsize, limit;
   int i;
 
@@ -856,8 +856,8 @@ tr_ilg(int n) {
 private
 void
 tr_insertionsort(int[] SA, int depth, int num_bstar,
-                 int *first, int *last) {
-  int *a, *b;
+                 int first, int last) {
+  int a, b;
   int t, r;
 
   for(a = first + 1; a < last; ++a) {
@@ -876,7 +876,7 @@ tr_insertionsort(int[] SA, int depth, int num_bstar,
 private
 void
 tr_fixdown(int[] SA, int depth, int num_bstar,
-           int *HB, int i, int size) {
+           int HB, int i, int size) {
   int j, k;
   int v;
   int c, d, e;
@@ -894,7 +894,7 @@ tr_fixdown(int[] SA, int depth, int num_bstar,
 private
 void
 tr_heapsort(int[] SA, int depth, int num_bstar,
-            int *HR, int size) {
+            int HR, int size) {
   int i, m;
   int t;
 
@@ -918,10 +918,10 @@ tr_heapsort(int[] SA, int depth, int num_bstar,
 
 /* Returns the median of three elements. */
 private
-int *
+int
 tr_median3(int[] SA, int depth, int num_bstar,
-           int *v1, int *v2, int *v3) {
-  int *t;
+           int v1, int v2, int v3) {
+  int t;
   if(TR_GETC(*v1) > TR_GETC(*v2)) { t = v1; v1 = v2; v2 = t; }
   if(TR_GETC(*v2) > TR_GETC(*v3)) {
     if(TR_GETC(*v1) > TR_GETC(*v3)) { return v1; }
@@ -932,10 +932,10 @@ tr_median3(int[] SA, int depth, int num_bstar,
 
 /* Returns the median of five elements. */
 private
-int *
+int
 tr_median5(int[] SA, int depth, int num_bstar,
-           int *v1, int *v2, int *v3, int *v4, int *v5) {
-  int *t;
+           int v1, int v2, int v3, int v4, int v5) {
+  int t;
   if(TR_GETC(*v2) > TR_GETC(*v3)) { t = v2; v2 = v3; v3 = t; }
   if(TR_GETC(*v4) > TR_GETC(*v5)) { t = v4; v4 = v5; v5 = t; }
   if(TR_GETC(*v2) > TR_GETC(*v4)) { t = v2; v2 = v4; v4 = t; t = v3; v3 = v5; v5 = t; }
@@ -947,10 +947,10 @@ tr_median5(int[] SA, int depth, int num_bstar,
 
 /* Returns the pivot element. */
 private
-int *
+int
 tr_pivot(int[] SA, int depth, int num_bstar,
-         int *first, int *last) {
-  int *middle;
+         int first, int last) {
+  int middle;
   int t;
 
   t = last - first;
@@ -1003,11 +1003,11 @@ trbudget_check(trbudget_t *budget, int size) {
 /*---------------------------------------------------------------------------*/
 
 private
-void
+long
 tr_partition(int[] SA, int depth, int num_bstar,
-             int *first, int *middle, int *last,
-             int **pa, int **pb, int v) {
-  int *a, *b, *c, *d, *e, *f;
+             int first, int middle, int last,
+             int v) {
+  int a, b, c, d, e, f;
   int t, s;
   int x = 0;
 
@@ -1041,17 +1041,17 @@ tr_partition(int[] SA, int depth, int num_bstar,
     for(e = b, f = last - s; 0 < s; --s, ++e, ++f) { t = *e; *e = *f; *f = t; }
     first += (b - a), last -= (d - c);
   }
-  *pa = first, *pb = last;
+  return ((long)first << 32) + last;
 }
 
 private
 void
-tr_copy(int[] SA, int num_bstar, int *SA,
-        int *first, int *a, int *b, int *last,
+tr_copy(int[] SA, int num_bstar,
+        int first, int a, int b, int last,
         int depth) {
   /* sort suffixes of middle partition
      by using sorted order of suffixes of left and right partition. */
-  int *c, *d, *e;
+  int c, d, e;
   int s, v;
 
   v = b - SA - 1;
@@ -1073,10 +1073,10 @@ tr_copy(int[] SA, int num_bstar, int *SA,
 
 private
 void
-tr_partialcopy(int[] SA, int num_bstar, int *SA,
-               int *first, int *a, int *b, int *last,
+tr_partialcopy(int[] SA, int num_bstar,
+               int first, int a, int b, int last,
                int depth) {
-  int *c, *d, *e;
+  int c, d, e;
   int s, v, t;
   int rank, lastrank, newrank = -1;
 
@@ -1116,15 +1116,16 @@ tr_partialcopy(int[] SA, int num_bstar, int *SA,
 private
 void
 tr_introsort(int[] SA, int depth, int num_bstar,
-             int *first, int *last,
+             int first, int last,
              trbudget_t *budget) {
   int[] stack = new int[5 * TR_STACKSIZE];
-  int *a, *b, *c;
+  int a, b, c;
   int t;
   int v, x = 0;
   int incr = depth;
   int limit, next;
   int ssize, trlink = -1;
+  long range;
 
   for(ssize = 0, limit = tr_ilg(last - first);;) {
     assert((depth < num_bstar) || (limit == -3));
@@ -1132,7 +1133,9 @@ tr_introsort(int[] SA, int depth, int num_bstar,
     if(limit < 0) {
       if(limit == -1) {
         /* tandem repeat partition */
-        tr_partition(SA, depth - incr, num_bstar, first, first, last, &a, &b, last - SA - 1);
+        range = tr_partition(SA, depth - incr, num_bstar, first, first, last, last - SA - 1);
+        a = (int)(range >> 32);
+        b = (int)range;
 
         /* update ranks */
         if(a < last) {
@@ -1190,10 +1193,10 @@ tr_introsort(int[] SA, int depth, int num_bstar,
         limit = stack[ssize - 2];
         ssize -= 5;
         if(limit == 0) {
-          tr_copy(SA, num_bstar, SA, first, a, b, last, depth);
+          tr_copy(SA, num_bstar, first, a, b, last, depth);
         } else {
           if(0 <= trlink) { stack[trlink + 3] = -1; }
-          tr_partialcopy(SA, num_bstar, SA, first, a, b, last, depth);
+          tr_partialcopy(SA, num_bstar, first, a, b, last, depth);
         }
         // STACK_POP5(depth, first, last, limit, trlink)
         if(ssize == 0) return;
@@ -1278,7 +1281,9 @@ tr_introsort(int[] SA, int depth, int num_bstar,
     v = TR_GETC(*first);
 
     /* partition */
-    tr_partition(SA, depth, num_bstar, first, first + 1, last, &a, &b, v);
+    range = tr_partition(SA, depth, num_bstar, first, first + 1, last, v);
+    a = (int)(range >> 32);
+    b = (int)range;
     if((last - first) != (b - a)) {
       next = (incr < (num_bstar - depth)) ? ((SA[num_bstar + *a] != v) ? tr_ilg(b - a) : -1) : -3;
 
@@ -1405,7 +1410,7 @@ tr_introsort(int[] SA, int depth, int num_bstar,
 private
 void
 trsort(int[] SA, int n, int depth) {
-  int *first, *last, *a;
+  int first, last, a;
   trbudget_t budget;
   int t, skip, unsorted;
 
@@ -1456,10 +1461,10 @@ trsort(int[] SA, int n, int depth) {
 /* Sorts suffixes of type B*. */
 private
 int
-sort_typeBstar(byte[] T, int *SA,
-               int *bucket, int n) {
+sort_typeBstar(byte[] T, int[] SA,
+               int[] bucket, int n) {
   int xpa;
-  int *buf;
+  int buf;
   int i, j, k, t, m, bufsize;
   int c0, c1;
   int flag;
@@ -1603,9 +1608,9 @@ note:
 
 private
 int
-construct_BWT(byte[] T, int *SA,
-              int *bucket, int n) {
-  int *i, *j, *k;
+construct_BWT(byte[] T, int SA,
+              int bucket, int n) {
+  int i, j, k;
   int s, t, orig = -10;
   int c0, c1, c2;
 
