@@ -69,7 +69,7 @@ import static java.lang.Math.*;
 /* for trsort.c */
 #define TR_GETC(_p) (((_p) < (ISAn - ISAd)) ? ISAd[(_p)] : ISA[(ISAd - ISA + (_p)) % (ISAn - ISA)])
 /* for sssort.c and trsort.c */
-static const int lg_table[256]= {
+private final int lg_table[256]= {
  -1,0,1,1,2,2,2,2,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,
   5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,
   6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,
@@ -85,7 +85,7 @@ static const int lg_table[256]= {
 
 /*- Private Functions -*/
 
-static INLINE
+private
 int
 ss_ilg(int n) {
   return (n & 0xff00) ?
@@ -94,7 +94,7 @@ ss_ilg(int n) {
 }
 
 
-static const int sqq_table[256] = {
+private final int sqq_table[256] = {
   0,  16,  22,  27,  32,  35,  39,  42,  45,  48,  50,  53,  55,  57,  59,  61,
  64,  65,  67,  69,  71,  73,  75,  76,  78,  80,  81,  83,  84,  86,  87,  89,
  90,  91,  93,  94,  96,  97,  98,  99, 101, 102, 103, 104, 106, 107, 108, 109,
@@ -113,7 +113,7 @@ static const int sqq_table[256] = {
 247, 248, 248, 249, 249, 250, 250, 251, 251, 252, 252, 253, 253, 254, 254, 255
 };
 
-static INLINE
+private
 int
 ss_isqrt(int x) {
   int y, e;
@@ -144,12 +144,12 @@ ss_isqrt(int x) {
 /*---------------------------------------------------------------------------*/
 
 /* Compares two suffixes. */
-static INLINE
+private
 int
-ss_compare(const byte *T,
-           const int *p1, const int *p2,
+ss_compare(byte *T,
+           int *p1, int *p2,
            int depth) {
-  const byte *U1, *U2, *U1n, *U2n;
+  byte *U1, *U2, *U1n, *U2n;
 
   for(U1 = T + depth + *p1,
       U2 = T + depth + *p2,
@@ -164,12 +164,12 @@ ss_compare(const byte *T,
         (U2 < U2n ? -1 : 0);
 }
 
-static INLINE
+private
 int
-ss_compare_last(const byte *T, const int *PA,
-                const int *p1, const int *p2,
+ss_compare_last(byte *T, int *PA,
+                int *p1, int *p2,
                 int depth, int size) {
-  const byte *U1, *U2, *U1n, *U2n;
+  byte *U1, *U2, *U1n, *U2n;
 
   for(U1 = T + depth + *p1,
       U2 = T + depth + *p2,
@@ -197,9 +197,9 @@ ss_compare_last(const byte *T, const int *PA,
 /*---------------------------------------------------------------------------*/
 
 /* Insertionsort for small size groups */
-static
+private
 void
-ss_insertionsort(const byte *T, const int *PA,
+ss_insertionsort(byte *T, int *PA,
                  int *first, int *last, int depth) {
   int *i, *j;
   int t;
@@ -218,9 +218,9 @@ ss_insertionsort(const byte *T, const int *PA,
 
 /*---------------------------------------------------------------------------*/
 
-static INLINE
+private
 void
-ss_fixdown(const byte *Td, const int *PA,
+ss_fixdown(byte *Td, int *PA,
            int *SA, int i, int size) {
   int j, k;
   int v;
@@ -235,9 +235,9 @@ ss_fixdown(const byte *Td, const int *PA,
 }
 
 /* Simple top-down heapsort. */
-static
+private
 void
-ss_heapsort(const byte *Td, const int *PA, int *SA, int size) {
+ss_heapsort(byte *Td, int *PA, int *SA, int size) {
   int i, m;
   int t;
 
@@ -260,9 +260,9 @@ ss_heapsort(const byte *Td, const int *PA, int *SA, int size) {
 /*---------------------------------------------------------------------------*/
 
 /* Returns the median of three elements. */
-static INLINE
+private
 int *
-ss_median3(const byte *Td, const int *PA,
+ss_median3(byte *Td, int *PA,
            int *v1, int *v2, int *v3) {
   int *t;
   if(Td[PA[*v1]] > Td[PA[*v2]]) { t = v1; v1 = v2; v2 = t; }
@@ -274,9 +274,9 @@ ss_median3(const byte *Td, const int *PA,
 }
 
 /* Returns the median of five elements. */
-static INLINE
+private
 int *
-ss_median5(const byte *Td, const int *PA,
+ss_median5(byte *Td, int *PA,
            int *v1, int *v2, int *v3, int *v4, int *v5) {
   int *t;
   if(Td[PA[*v2]] > Td[PA[*v3]]) { t = v2; v2 = v3; v3 = t; }
@@ -289,9 +289,9 @@ ss_median5(const byte *Td, const int *PA,
 }
 
 /* Returns the pivot element. */
-static INLINE
+private
 int *
-ss_pivot(const byte *Td, const int *PA, int *first, int *last) {
+ss_pivot(byte *Td, int *PA, int *first, int *last) {
   int *middle;
   int t;
 
@@ -317,9 +317,9 @@ ss_pivot(const byte *Td, const int *PA, int *first, int *last) {
 /*---------------------------------------------------------------------------*/
 
 /* Binary partition for substrings. */
-static INLINE
+private
 int *
-ss_partition(const int *PA,
+ss_partition(int *PA,
                     int *first, int *last, int depth) {
   int *a, *b;
   int t;
@@ -336,14 +336,14 @@ ss_partition(const int *PA,
 }
 
 /* Multikey introsort for medium size groups. */
-static
+private
 void
-ss_mintrosort(const byte *T, const int *PA,
+ss_mintrosort(byte *T, int *PA,
               int *first, int *last,
               int depth) {
 #define STACK_SIZE SS_MISORT_STACKSIZE
   struct { int *a, *b, c; int d; } stack[STACK_SIZE];
-  const byte *Td;
+  byte *Td;
   int *a, *b, *c, *d, *e, *f;
   int s, t;
   int ssize;
@@ -472,7 +472,7 @@ ss_mintrosort(const byte *T, const int *PA,
 
 /*---------------------------------------------------------------------------*/
 
-static INLINE
+private
 void
 ss_blockswap(int *a, int *b, int n) {
   int t;
@@ -481,7 +481,7 @@ ss_blockswap(int *a, int *b, int n) {
   }
 }
 
-static INLINE
+private
 void
 ss_rotate(int *first, int *middle, int *last) {
   int *a, *b, t;
@@ -522,12 +522,12 @@ ss_rotate(int *first, int *middle, int *last) {
 
 /*---------------------------------------------------------------------------*/
 
-static
+private
 void
-ss_inplacemerge(const byte *T, const int *PA,
+ss_inplacemerge(byte *T, int *PA,
                 int *first, int *middle, int *last,
                 int depth) {
-  const int *p;
+  int *p;
   int *a, *b;
   int len, half;
   int q, r;
@@ -565,9 +565,9 @@ ss_inplacemerge(const byte *T, const int *PA,
 /*---------------------------------------------------------------------------*/
 
 /* Merge-forward with internal buffer. */
-static
+private
 void
-ss_mergeforward(const byte *T, const int *PA,
+ss_mergeforward(byte *T, int *PA,
                 int *first, int *middle, int *last,
                 int *buf, int depth) {
   int *a, *b, *c, *bufend;
@@ -615,12 +615,12 @@ ss_mergeforward(const byte *T, const int *PA,
 }
 
 /* Merge-backward with internal buffer. */
-static
+private
 void
-ss_mergebackward(const byte *T, const int *PA,
+ss_mergebackward(byte *T, int *PA,
                  int *first, int *middle, int *last,
                  int *buf, int depth) {
-  const int *p1, *p2;
+  int *p1, *p2;
   int *a, *b, *c, *bufend;
   int t;
   int r;
@@ -674,9 +674,9 @@ ss_mergebackward(const byte *T, const int *PA,
 }
 
 /* D&C based merge. */
-static
+private
 void
-ss_swapmerge(const byte *T, const int *PA,
+ss_swapmerge(byte *T, int *PA,
              int *first, int *middle, int *last,
              int *buf, int bufsize, int depth) {
 #define STACK_SIZE SS_SMERGE_STACKSIZE
@@ -766,9 +766,9 @@ ss_swapmerge(const byte *T, const int *PA,
 /*- Function -*/
 
 /* Substring sort */
-static
+private
 void
-sssort(const byte *T, const int *PA,
+sssort(byte *T, int *PA,
        int *first, int *last,
        int *buf, int bufsize,
        int depth, int n, int lastsuffix) {
@@ -826,7 +826,7 @@ sssort(const byte *T, const int *PA,
 
 /*- Private Functions -*/
 
-static INLINE
+private
 int
 tr_ilg(int n) {
   return (n & 0xffff0000) ?
@@ -842,9 +842,9 @@ tr_ilg(int n) {
 /*---------------------------------------------------------------------------*/
 
 /* Simple insertionsort for small size groups. */
-static
+private
 void
-tr_insertionsort(const int *ISA, const int *ISAd, const int *ISAn,
+tr_insertionsort(int *ISA, int *ISAd, int *ISAn,
                  int *first, int *last) {
   int *a, *b;
   int t, r;
@@ -862,9 +862,9 @@ tr_insertionsort(const int *ISA, const int *ISAd, const int *ISAn,
 
 /*---------------------------------------------------------------------------*/
 
-static INLINE
+private
 void
-tr_fixdown(const int *ISA, const int *ISAd, const int *ISAn,
+tr_fixdown(int *ISA, int *ISAd, int *ISAn,
            int *SA, int i, int size) {
   int j, k;
   int v;
@@ -880,9 +880,9 @@ tr_fixdown(const int *ISA, const int *ISAd, const int *ISAn,
 }
 
 /* Simple top-down heapsort. */
-static
+private
 void
-tr_heapsort(const int *ISA, const int *ISAd, const int *ISAn,
+tr_heapsort(int *ISA, int *ISAd, int *ISAn,
             int *SA, int size) {
   int i, m;
   int t;
@@ -906,9 +906,9 @@ tr_heapsort(const int *ISA, const int *ISAd, const int *ISAn,
 /*---------------------------------------------------------------------------*/
 
 /* Returns the median of three elements. */
-static INLINE
+private
 int *
-tr_median3(const int *ISA, const int *ISAd, const int *ISAn,
+tr_median3(int *ISA, int *ISAd, int *ISAn,
            int *v1, int *v2, int *v3) {
   int *t;
   if(TR_GETC(*v1) > TR_GETC(*v2)) { t = v1; v1 = v2; v2 = t; }
@@ -920,9 +920,9 @@ tr_median3(const int *ISA, const int *ISAd, const int *ISAn,
 }
 
 /* Returns the median of five elements. */
-static INLINE
+private
 int *
-tr_median5(const int *ISA, const int *ISAd, const int *ISAn,
+tr_median5(int *ISA, int *ISAd, int *ISAn,
            int *v1, int *v2, int *v3, int *v4, int *v5) {
   int *t;
   if(TR_GETC(*v2) > TR_GETC(*v3)) { t = v2; v2 = v3; v3 = t; }
@@ -935,9 +935,9 @@ tr_median5(const int *ISA, const int *ISAd, const int *ISAn,
 }
 
 /* Returns the pivot element. */
-static INLINE
+private
 int *
-tr_pivot(const int *ISA, const int *ISAd, const int *ISAn,
+tr_pivot(int *ISA, int *ISAd, int *ISAn,
          int *first, int *last) {
   int *middle;
   int t;
@@ -971,14 +971,14 @@ struct _trbudget_t {
   int count;
 };
 
-static INLINE
+private
 void
 trbudget_init(trbudget_t *budget, int chance, int incval) {
   budget->chance = chance;
   budget->remain = budget->incval = incval;
 }
 
-static INLINE
+private
 int
 trbudget_check(trbudget_t *budget, int size) {
   if(size <= budget->remain) { budget->remain -= size; return 1; }
@@ -991,9 +991,9 @@ trbudget_check(trbudget_t *budget, int size) {
 
 /*---------------------------------------------------------------------------*/
 
-static INLINE
+private
 void
-tr_partition(const int *ISA, const int *ISAd, const int *ISAn,
+tr_partition(int *ISA, int *ISAd, int *ISAn,
              int *first, int *middle, int *last,
              int **pa, int **pb, int v) {
   int *a, *b, *c, *d, *e, *f;
@@ -1033,9 +1033,9 @@ tr_partition(const int *ISA, const int *ISAd, const int *ISAn,
   *pa = first, *pb = last;
 }
 
-static
+private
 void
-tr_copy(int *ISA, const int *ISAn, const int *SA,
+tr_copy(int *ISA, int *ISAn, int *SA,
         int *first, int *a, int *b, int *last,
         int depth) {
   /* sort suffixes of middle partition
@@ -1060,9 +1060,9 @@ tr_copy(int *ISA, const int *ISAn, const int *SA,
   }
 }
 
-static
+private
 void
-tr_partialcopy(int *ISA, const int *ISAn, const int *SA,
+tr_partialcopy(int *ISA, int *ISAn, int *SA,
                int *first, int *a, int *b, int *last,
                int depth) {
   int *c, *d, *e;
@@ -1102,13 +1102,13 @@ tr_partialcopy(int *ISA, const int *ISAn, const int *SA,
   }
 }
 
-static
+private
 void
-tr_introsort(int *ISA, const int *ISAd, const int *ISAn,
+tr_introsort(int *ISA, int *ISAd, int *ISAn,
              int *SA, int *first, int *last,
              trbudget_t *budget) {
 #define STACK_SIZE TR_STACKSIZE
-  struct { const int *a; int *b, *c; int d, e; }stack[STACK_SIZE];
+  struct { int *a; int *b, *c; int d, e; }stack[STACK_SIZE];
   int *a, *b, *c;
   int t;
   int v, x = 0;
@@ -1332,7 +1332,7 @@ tr_introsort(int *ISA, const int *ISAd, const int *ISAn,
 /*- Function -*/
 
 /* Tandem repeat sort */
-static
+private
 void
 trsort(int *ISA, int *SA, int n, int depth) {
   int *ISAd;
@@ -1385,9 +1385,9 @@ trsort(int *ISA, int *SA, int n, int depth) {
 /*- Private Functions -*/
 
 /* Sorts suffixes of type B*. */
-static
+private
 int
-sort_typeBstar(const byte *T, int *SA,
+sort_typeBstar(byte *T, int *SA,
                int *bucket, int n) {
   int *PAb, *ISAb, *buf;
   int i, j, k, t, m, bufsize;
@@ -1531,9 +1531,9 @@ note:
   return m;
 }
 
-static
+private
 int
-construct_BWT(const byte *T, int *SA,
+construct_BWT(byte *T, int *SA,
               int *bucket, int n) {
   int *i, *j, *k;
   int s, t, orig = -10;
