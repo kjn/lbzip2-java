@@ -60,7 +60,7 @@ STACK_PUSH5(int[] stack, int ssize, int a, int b, int c, int d, int e)
 #define BUCKET_B(_c0, _c1) (bucket[((_c1) << 8) | (_c0)])
 #define BUCKET_BSTAR(_c0, _c1) (bucket[((_c0) << 8) | (_c1)])
 /* for trsort.c */
-#define TR_GETC(_p) (((_p) < (ISAn - ISAd)) ? ISAd[(_p)] : ISA[(ISAd - ISA + (_p)) % (ISAn - ISA)])
+#define TR_GETC(_p) (((_p) < (num_bstar - depth)) ? ISA[(_p) + depth] : ISA[((_p) + depth) % num_bstar])
 /* for sssort.c and trsort.c */
 private final int lg_table[256]= {
  -1,0,1,1,2,2,2,2,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,
@@ -855,7 +855,7 @@ tr_ilg(int n) {
 /* Simple insertionsort for small size groups. */
 private
 void
-tr_insertionsort(int *ISA, int *ISAd, int *ISAn,
+tr_insertionsort(int *ISA, int depth, int num_bstar,
                  int *first, int *last) {
   int *a, *b;
   int t, r;
@@ -875,7 +875,7 @@ tr_insertionsort(int *ISA, int *ISAd, int *ISAn,
 
 private
 void
-tr_fixdown(int *ISA, int *ISAd, int *ISAn,
+tr_fixdown(int *ISA, int depth, int num_bstar,
            int *HB, int i, int size) {
   int j, k;
   int v;
@@ -893,7 +893,7 @@ tr_fixdown(int *ISA, int *ISAd, int *ISAn,
 /* Simple top-down heapsort. */
 private
 void
-tr_heapsort(int *ISA, int *ISAd, int *ISAn,
+tr_heapsort(int *ISA, int depth, int num_bstar,
             int *HR, int size) {
   int i, m;
   int t;
@@ -904,11 +904,11 @@ tr_heapsort(int *ISA, int *ISAd, int *ISAn,
     if(TR_GETC(HR[m / 2]) < TR_GETC(HR[m])) { t = HR[m]; HR[m] = HR[m / 2]; HR[m / 2] = t; }
   }
 
-  for(i = m / 2 - 1; 0 <= i; --i) { tr_fixdown(ISA, ISAd, ISAn, HR, i, m); }
-  if((size % 2) == 0) { t = HR[0]; HR[0] = HR[m]; HR[m] = t; tr_fixdown(ISA, ISAd, ISAn, HR, 0, m); }
+  for(i = m / 2 - 1; 0 <= i; --i) { tr_fixdown(ISA, depth, num_bstar, HR, i, m); }
+  if((size % 2) == 0) { t = HR[0]; HR[0] = HR[m]; HR[m] = t; tr_fixdown(ISA, depth, num_bstar, HR, 0, m); }
   for(i = m - 1; 0 < i; --i) {
     t = HR[0], HR[0] = HR[i];
-    tr_fixdown(ISA, ISAd, ISAn, HR, 0, i);
+    tr_fixdown(ISA, depth, num_bstar, HR, 0, i);
     HR[i] = t;
   }
 }
@@ -919,7 +919,7 @@ tr_heapsort(int *ISA, int *ISAd, int *ISAn,
 /* Returns the median of three elements. */
 private
 int *
-tr_median3(int *ISA, int *ISAd, int *ISAn,
+tr_median3(int *ISA, int depth, int num_bstar,
            int *v1, int *v2, int *v3) {
   int *t;
   if(TR_GETC(*v1) > TR_GETC(*v2)) { t = v1; v1 = v2; v2 = t; }
@@ -933,7 +933,7 @@ tr_median3(int *ISA, int *ISAd, int *ISAn,
 /* Returns the median of five elements. */
 private
 int *
-tr_median5(int *ISA, int *ISAd, int *ISAn,
+tr_median5(int *ISA, int depth, int num_bstar,
            int *v1, int *v2, int *v3, int *v4, int *v5) {
   int *t;
   if(TR_GETC(*v2) > TR_GETC(*v3)) { t = v2; v2 = v3; v3 = t; }
@@ -948,7 +948,7 @@ tr_median5(int *ISA, int *ISAd, int *ISAn,
 /* Returns the pivot element. */
 private
 int *
-tr_pivot(int *ISA, int *ISAd, int *ISAn,
+tr_pivot(int *ISA, int depth, int num_bstar,
          int *first, int *last) {
   int *middle;
   int t;
@@ -958,17 +958,17 @@ tr_pivot(int *ISA, int *ISAd, int *ISAn,
 
   if(t <= 512) {
     if(t <= 32) {
-      return tr_median3(ISA, ISAd, ISAn, first, middle, last - 1);
+      return tr_median3(ISA, depth, num_bstar, first, middle, last - 1);
     } else {
       t >>= 2;
-      return tr_median5(ISA, ISAd, ISAn, first, first + t, middle, last - 1 - t, last - 1);
+      return tr_median5(ISA, depth, num_bstar, first, first + t, middle, last - 1 - t, last - 1);
     }
   }
   t >>= 3;
-  first  = tr_median3(ISA, ISAd, ISAn, first, first + t, first + (t << 1));
-  middle = tr_median3(ISA, ISAd, ISAn, middle - t, middle, middle + t);
-  last   = tr_median3(ISA, ISAd, ISAn, last - 1 - (t << 1), last - 1 - t, last - 1);
-  return tr_median3(ISA, ISAd, ISAn, first, middle, last);
+  first  = tr_median3(ISA, depth, num_bstar, first, first + t, first + (t << 1));
+  middle = tr_median3(ISA, depth, num_bstar, middle - t, middle, middle + t);
+  last   = tr_median3(ISA, depth, num_bstar, last - 1 - (t << 1), last - 1 - t, last - 1);
+  return tr_median3(ISA, depth, num_bstar, first, middle, last);
 }
 
 
@@ -1004,7 +1004,7 @@ trbudget_check(trbudget_t *budget, int size) {
 
 private
 void
-tr_partition(int *ISA, int *ISAd, int *ISAn,
+tr_partition(int *ISA, int depth, int num_bstar,
              int *first, int *middle, int *last,
              int **pa, int **pb, int v) {
   int *a, *b, *c, *d, *e, *f;
@@ -1046,7 +1046,7 @@ tr_partition(int *ISA, int *ISAd, int *ISAn,
 
 private
 void
-tr_copy(int *ISA, int *ISAn, int *SA,
+tr_copy(int *ISA, int num_bstar, int *SA,
         int *first, int *a, int *b, int *last,
         int depth) {
   /* sort suffixes of middle partition
@@ -1056,14 +1056,14 @@ tr_copy(int *ISA, int *ISAn, int *SA,
 
   v = b - SA - 1;
   for(c = first, d = a - 1; c <= d; ++c) {
-    if((s = *c - depth) < 0) { s += ISAn - ISA; }
+    if((s = *c - depth) < 0) { s += num_bstar; }
     if(ISA[s] == v) {
       *++d = s;
       ISA[s] = d - SA;
     }
   }
   for(c = last - 1, e = d + 1, d = b; e < d; --c) {
-    if((s = *c - depth) < 0) { s += ISAn - ISA; }
+    if((s = *c - depth) < 0) { s += num_bstar; }
     if(ISA[s] == v) {
       *--d = s;
       ISA[s] = d - SA;
@@ -1073,7 +1073,7 @@ tr_copy(int *ISA, int *ISAn, int *SA,
 
 private
 void
-tr_partialcopy(int *ISA, int *ISAn, int *SA,
+tr_partialcopy(int *ISA, int num_bstar, int *SA,
                int *first, int *a, int *b, int *last,
                int depth) {
   int *c, *d, *e;
@@ -1084,7 +1084,7 @@ tr_partialcopy(int *ISA, int *ISAn, int *SA,
   lastrank = -1;
   for(c = first, d = a - 1; c <= d; ++c) {
     t = *c;
-    if((s = t - depth) < 0) { s += ISAn - ISA; }
+    if((s = t - depth) < 0) { s += num_bstar; }
     if(ISA[s] == v) {
       *++d = s;
       rank = ISA[t];
@@ -1103,7 +1103,7 @@ tr_partialcopy(int *ISA, int *ISAn, int *SA,
   lastrank = -1;
   for(c = last - 1, e = d + 1, d = b; e < d; --c) {
     t = *c;
-    if((s = t - depth) < 0) { s += ISAn - ISA; }
+    if((s = t - depth) < 0) { s += num_bstar; }
     if(ISA[s] == v) {
       *--d = s;
       rank = ISA[t];
@@ -1115,24 +1115,24 @@ tr_partialcopy(int *ISA, int *ISAn, int *SA,
 
 private
 void
-tr_introsort(int *ISA, int *ISAd, int *ISAn,
+tr_introsort(int *ISA, int depth, int num_bstar,
              int *SA, int *first, int *last,
              trbudget_t *budget) {
   int[] stack = new int[5 * TR_STACKSIZE];
   int *a, *b, *c;
   int t;
   int v, x = 0;
-  int incr = ISAd - ISA;
+  int incr = depth;
   int limit, next;
   int ssize, trlink = -1;
 
   for(ssize = 0, limit = tr_ilg(last - first);;) {
-    assert((ISAd < ISAn) || (limit == -3));
+    assert((depth < num_bstar) || (limit == -3));
 
     if(limit < 0) {
       if(limit == -1) {
         /* tandem repeat partition */
-        tr_partition(ISA, ISAd - incr, ISAn, first, first, last, &a, &b, last - SA - 1);
+        tr_partition(ISA, depth - incr, num_bstar, first, first, last, &a, &b, last - SA - 1);
 
         /* update ranks */
         if(a < last) {
@@ -1145,19 +1145,19 @@ tr_introsort(int *ISA, int *ISAd, int *ISAn,
         /* push */
         if(1 < (b - a)) {
           ssize = STACK_PUSH5(stack, ssize, NULL, a, b, 0, 0);
-          ssize = STACK_PUSH5(stack, ssize, ISAd - incr, first, last, -2, trlink);
+          ssize = STACK_PUSH5(stack, ssize, depth - incr, first, last, -2, trlink);
           trlink = ssize - 10;
         }
         if((a - first) <= (last - b)) {
           if(1 < (a - first)) {
-            ssize = STACK_PUSH5(stack, ssize, ISAd, b, last, tr_ilg(last - b), trlink);
+            ssize = STACK_PUSH5(stack, ssize, depth, b, last, tr_ilg(last - b), trlink);
             last = a, limit = tr_ilg(a - first);
           } else if(1 < (last - b)) {
             first = b, limit = tr_ilg(last - b);
           } else {
-            // STACK_POP5(ISAd, first, last, limit, trlink)
+            // STACK_POP5(depth, first, last, limit, trlink)
             if(ssize == 0) return;
-            ISAd = stack[ssize - 5];
+            depth = stack[ssize - 5];
             first = stack[ssize - 4];
             last = stack[ssize - 3];
             limit = stack[ssize - 2];
@@ -1166,14 +1166,14 @@ tr_introsort(int *ISA, int *ISAd, int *ISAn,
           }
         } else {
           if(1 < (last - b)) {
-            ssize = STACK_PUSH5(stack, ssize, ISAd, first, a, tr_ilg(a - first), trlink);
+            ssize = STACK_PUSH5(stack, ssize, depth, first, a, tr_ilg(a - first), trlink);
             first = b, limit = tr_ilg(last - b);
           } else if(1 < (a - first)) {
             last = a, limit = tr_ilg(a - first);
           } else {
-            // STACK_POP5(ISAd, first, last, limit, trlink)
+            // STACK_POP5(depth, first, last, limit, trlink)
             if(ssize == 0) return;
-            ISAd = stack[ssize - 5];
+            depth = stack[ssize - 5];
             first = stack[ssize - 4];
             last = stack[ssize - 3];
             limit = stack[ssize - 2];
@@ -1190,14 +1190,14 @@ tr_introsort(int *ISA, int *ISAd, int *ISAn,
         limit = stack[ssize - 2];
         ssize -= 5;
         if(limit == 0) {
-          tr_copy(ISA, ISAn, SA, first, a, b, last, ISAd - ISA);
+          tr_copy(ISA, num_bstar, SA, first, a, b, last, depth);
         } else {
           if(0 <= trlink) { stack[trlink + 3] = -1; }
-          tr_partialcopy(ISA, ISAn, SA, first, a, b, last, ISAd - ISA);
+          tr_partialcopy(ISA, num_bstar, SA, first, a, b, last, depth);
         }
-        // STACK_POP5(ISAd, first, last, limit, trlink)
+        // STACK_POP5(depth, first, last, limit, trlink)
         if(ssize == 0) return;
-        ISAd = stack[ssize - 5];
+        depth = stack[ssize - 5];
         first = stack[ssize - 4];
         last = stack[ssize - 3];
         limit = stack[ssize - 2];
@@ -1212,20 +1212,20 @@ tr_introsort(int *ISA, int *ISAd, int *ISAn,
         }
         if(first < last) {
           a = first; do { *a = ~*a; } while(*++a < 0);
-          next = (incr < (ISAn - ISAd)) ? ((ISA[*a] != TR_GETC(*a)) ? tr_ilg(a - first + 1) : -1) : -3;
+          next = (incr < (num_bstar - depth)) ? ((ISA[*a] != TR_GETC(*a)) ? tr_ilg(a - first + 1) : -1) : -3;
           if(++a < last) { for(b = first, v = a - SA - 1; b < a; ++b) { ISA[*b] = v; } }
 
           /* push */
           if(trbudget_check(budget, a - first)) {
             if((a - first) <= (last - a)) {
-              ssize = STACK_PUSH5(stack, ssize, ISAd, a, last, -3, trlink);
-              ISAd += incr, last = a, limit = next;
+              ssize = STACK_PUSH5(stack, ssize, depth, a, last, -3, trlink);
+              depth += incr, last = a, limit = next;
             } else {
               if(1 < (last - a)) {
-                ssize = STACK_PUSH5(stack, ssize, ISAd + incr, first, a, next, trlink);
+                ssize = STACK_PUSH5(stack, ssize, depth + incr, first, a, next, trlink);
                 first = a, limit = -3;
               } else {
-                ISAd += incr, last = a, limit = next;
+                depth += incr, last = a, limit = next;
               }
             }
           } else {
@@ -1233,9 +1233,9 @@ tr_introsort(int *ISA, int *ISAd, int *ISAn,
             if(1 < (last - a)) {
               first = a, limit = -3;
             } else {
-              // STACK_POP5(ISAd, first, last, limit, trlink)
+              // STACK_POP5(depth, first, last, limit, trlink)
               if(ssize == 0) return;
-              ISAd = stack[ssize - 5];
+              depth = stack[ssize - 5];
               first = stack[ssize - 4];
               last = stack[ssize - 3];
               limit = stack[ssize - 2];
@@ -1244,9 +1244,9 @@ tr_introsort(int *ISA, int *ISAd, int *ISAn,
             }
           }
         } else {
-          // STACK_POP5(ISAd, first, last, limit, trlink)
+          // STACK_POP5(depth, first, last, limit, trlink)
           if(ssize == 0) return;
-          ISAd = stack[ssize - 5];
+          depth = stack[ssize - 5];
           first = stack[ssize - 4];
           last = stack[ssize - 3];
           limit = stack[ssize - 2];
@@ -1258,13 +1258,13 @@ tr_introsort(int *ISA, int *ISAd, int *ISAn,
     }
 
     if((last - first) <= TR_INSERTIONSORT_THRESHOLD) {
-      tr_insertionsort(ISA, ISAd, ISAn, first, last);
+      tr_insertionsort(ISA, depth, num_bstar, first, last);
       limit = -3;
       continue;
     }
 
     if(limit-- == 0) {
-      tr_heapsort(ISA, ISAd, ISAn, first, last - first);
+      tr_heapsort(ISA, depth, num_bstar, first, last - first);
       for(a = last - 1; first < a; a = b) {
         for(x = TR_GETC(*a), b = a - 1; (first <= b) && (TR_GETC(*b) == x); --b) { *b = ~*b; }
       }
@@ -1273,14 +1273,14 @@ tr_introsort(int *ISA, int *ISAd, int *ISAn,
     }
 
     /* choose pivot */
-    a = tr_pivot(ISA, ISAd, ISAn, first, last);
+    a = tr_pivot(ISA, depth, num_bstar, first, last);
     t = *first; *first = *a; *a = t;
     v = TR_GETC(*first);
 
     /* partition */
-    tr_partition(ISA, ISAd, ISAn, first, first + 1, last, &a, &b, v);
+    tr_partition(ISA, depth, num_bstar, first, first + 1, last, &a, &b, v);
     if((last - first) != (b - a)) {
-      next = (incr < (ISAn - ISAd)) ? ((ISA[*a] != v) ? tr_ilg(b - a) : -1) : -3;
+      next = (incr < (num_bstar - depth)) ? ((ISA[*a] != v) ? tr_ilg(b - a) : -1) : -3;
 
       /* update ranks */
       for(c = first, v = a - SA - 1; c < a; ++c) { ISA[*c] = v; }
@@ -1291,68 +1291,68 @@ tr_introsort(int *ISA, int *ISAd, int *ISAn,
         if((a - first) <= (last - b)) {
           if((last - b) <= (b - a)) {
             if(1 < (a - first)) {
-              ssize = STACK_PUSH5(stack, ssize, ISAd + incr, a, b, next, trlink);
-              ssize = STACK_PUSH5(stack, ssize, ISAd, b, last, limit, trlink);
+              ssize = STACK_PUSH5(stack, ssize, depth + incr, a, b, next, trlink);
+              ssize = STACK_PUSH5(stack, ssize, depth, b, last, limit, trlink);
               last = a;
             } else if(1 < (last - b)) {
-              ssize = STACK_PUSH5(stack, ssize, ISAd + incr, a, b, next, trlink);
+              ssize = STACK_PUSH5(stack, ssize, depth + incr, a, b, next, trlink);
               first = b;
             } else {
-              ISAd += incr, first = a, last = b, limit = next;
+              depth += incr, first = a, last = b, limit = next;
             }
           } else if((a - first) <= (b - a)) {
             if(1 < (a - first)) {
-              ssize = STACK_PUSH5(stack, ssize, ISAd, b, last, limit, trlink);
-              ssize = STACK_PUSH5(stack, ssize, ISAd + incr, a, b, next, trlink);
+              ssize = STACK_PUSH5(stack, ssize, depth, b, last, limit, trlink);
+              ssize = STACK_PUSH5(stack, ssize, depth + incr, a, b, next, trlink);
               last = a;
             } else {
-              ssize = STACK_PUSH5(stack, ssize, ISAd, b, last, limit, trlink);
-              ISAd += incr, first = a, last = b, limit = next;
+              ssize = STACK_PUSH5(stack, ssize, depth, b, last, limit, trlink);
+              depth += incr, first = a, last = b, limit = next;
             }
           } else {
-            ssize = STACK_PUSH5(stack, ssize, ISAd, b, last, limit, trlink);
-            ssize = STACK_PUSH5(stack, ssize, ISAd, first, a, limit, trlink);
-            ISAd += incr, first = a, last = b, limit = next;
+            ssize = STACK_PUSH5(stack, ssize, depth, b, last, limit, trlink);
+            ssize = STACK_PUSH5(stack, ssize, depth, first, a, limit, trlink);
+            depth += incr, first = a, last = b, limit = next;
           }
         } else {
           if((a - first) <= (b - a)) {
             if(1 < (last - b)) {
-              ssize = STACK_PUSH5(stack, ssize, ISAd + incr, a, b, next, trlink);
-              ssize = STACK_PUSH5(stack, ssize, ISAd, first, a, limit, trlink);
+              ssize = STACK_PUSH5(stack, ssize, depth + incr, a, b, next, trlink);
+              ssize = STACK_PUSH5(stack, ssize, depth, first, a, limit, trlink);
               first = b;
             } else if(1 < (a - first)) {
-              ssize = STACK_PUSH5(stack, ssize, ISAd + incr, a, b, next, trlink);
+              ssize = STACK_PUSH5(stack, ssize, depth + incr, a, b, next, trlink);
               last = a;
             } else {
-              ISAd += incr, first = a, last = b, limit = next;
+              depth += incr, first = a, last = b, limit = next;
             }
           } else if((last - b) <= (b - a)) {
             if(1 < (last - b)) {
-              ssize = STACK_PUSH5(stack, ssize, ISAd, first, a, limit, trlink);
-              ssize = STACK_PUSH5(stack, ssize, ISAd + incr, a, b, next, trlink);
+              ssize = STACK_PUSH5(stack, ssize, depth, first, a, limit, trlink);
+              ssize = STACK_PUSH5(stack, ssize, depth + incr, a, b, next, trlink);
               first = b;
             } else {
-              ssize = STACK_PUSH5(stack, ssize, ISAd, first, a, limit, trlink);
-              ISAd += incr, first = a, last = b, limit = next;
+              ssize = STACK_PUSH5(stack, ssize, depth, first, a, limit, trlink);
+              depth += incr, first = a, last = b, limit = next;
             }
           } else {
-            ssize = STACK_PUSH5(stack, ssize, ISAd, first, a, limit, trlink);
-            ssize = STACK_PUSH5(stack, ssize, ISAd, b, last, limit, trlink);
-            ISAd += incr, first = a, last = b, limit = next;
+            ssize = STACK_PUSH5(stack, ssize, depth, first, a, limit, trlink);
+            ssize = STACK_PUSH5(stack, ssize, depth, b, last, limit, trlink);
+            depth += incr, first = a, last = b, limit = next;
           }
         }
       } else {
         if((1 < (b - a)) && (0 <= trlink)) { stack[trlink + 3] = -1; }
         if((a - first) <= (last - b)) {
           if(1 < (a - first)) {
-            ssize = STACK_PUSH5(stack, ssize, ISAd, b, last, limit, trlink);
+            ssize = STACK_PUSH5(stack, ssize, depth, b, last, limit, trlink);
             last = a;
           } else if(1 < (last - b)) {
             first = b;
           } else {
-            // STACK_POP5(ISAd, first, last, limit, trlink)
+            // STACK_POP5(depth, first, last, limit, trlink)
             if(ssize == 0) return;
-            ISAd = stack[ssize - 5];
+            depth = stack[ssize - 5];
             first = stack[ssize - 4];
             last = stack[ssize - 3];
             limit = stack[ssize - 2];
@@ -1361,14 +1361,14 @@ tr_introsort(int *ISA, int *ISAd, int *ISAn,
           }
         } else {
           if(1 < (last - b)) {
-            ssize = STACK_PUSH5(stack, ssize, ISAd, first, a, limit, trlink);
+            ssize = STACK_PUSH5(stack, ssize, depth, first, a, limit, trlink);
             first = b;
           } else if(1 < (a - first)) {
             last = a;
           } else {
-            // STACK_POP5(ISAd, first, last, limit, trlink)
+            // STACK_POP5(depth, first, last, limit, trlink)
             if(ssize == 0) return;
-            ISAd = stack[ssize - 5];
+            depth = stack[ssize - 5];
             first = stack[ssize - 4];
             last = stack[ssize - 3];
             limit = stack[ssize - 2];
@@ -1379,13 +1379,13 @@ tr_introsort(int *ISA, int *ISAd, int *ISAn,
       }
     } else {
       if(trbudget_check(budget, last - first)) {
-        limit = (incr < (ISAn - ISAd)) ? ((ISA[*first] != TR_GETC(*first)) ? (limit + 1) : -1) : -3;
-        ISAd += incr;
+        limit = (incr < (num_bstar - depth)) ? ((ISA[*first] != TR_GETC(*first)) ? (limit + 1) : -1) : -3;
+        depth += incr;
       } else {
         if(0 <= trlink) { stack[trlink + 3] = -1; }
-        // STACK_POP5(ISAd, first, last, limit, trlink)
+        // STACK_POP5(depth, first, last, limit, trlink)
         if(ssize == 0) return;
-        ISAd = stack[ssize - 5];
+        depth = stack[ssize - 5];
         first = stack[ssize - 4];
         last = stack[ssize - 3];
         limit = stack[ssize - 2];
@@ -1405,15 +1405,14 @@ tr_introsort(int *ISA, int *ISAd, int *ISAn,
 private
 void
 trsort(int *ISA, int *SA, int n, int depth) {
-  int *ISAd;
   int *first, *last, *a;
   trbudget_t budget;
   int t, skip, unsorted;
 
   if (-n >= *SA) { return; }
   trbudget_init(&budget, tr_ilg(n) * 2 / 3, n);
-  for(ISAd = ISA + depth;; ISAd += ISAd - ISA) {
-    assert(n > ISAd - ISA);
+  for(;; depth += depth) {
+    assert(n > depth);
     first = SA;
     skip = 0;
     unsorted = 0;
@@ -1424,7 +1423,7 @@ trsort(int *ISA, int *SA, int n, int depth) {
         last = SA + ISA[t] + 1;
         if(1 < (last - first)) {
           budget.count = 0;
-          tr_introsort(ISA, ISAd, ISA + n, SA, first, last, &budget);
+          tr_introsort(ISA, depth, n, SA, first, last, &budget);
           if(budget.count != 0) { unsorted += budget.count; }
           else { skip = first - last; }
         } else if((last - first) == 1) {
@@ -1435,7 +1434,7 @@ trsort(int *ISA, int *SA, int n, int depth) {
     } while(first < (SA + n));
     if(skip != 0) { *(first + skip) = skip; }
     if(unsorted == 0 || -n >= *SA) { break; }
-    if(n <= (ISAd - ISA) * 2) {
+    if(n <= (depth) * 2) {
       do {
         if((t = *first) < 0) { first -= t; }
         else {
