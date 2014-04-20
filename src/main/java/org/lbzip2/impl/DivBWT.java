@@ -23,17 +23,17 @@
 import static java.lang.Math.*;
 
 /*- Settings -*/
-#define SS_INSERTIONSORT_THRESHOLD 8
-#define SS_BLOCKSIZE 1024
-#define ALPHABET_SIZE 256
+private static final int SS_INSERTIONSORT_THRESHOLD = 8;
+private static final int SS_BLOCKSIZE = 1024;
+private static final int ALPHABET_SIZE = 256;
 
 
 /* minstacksize = log(SS_BLOCKSIZE) / log(3) * 2 */
-# define SS_MISORT_STACKSIZE (16)
-# define SS_SMERGE_STACKSIZE (32)
+private static final int SS_MISORT_STACKSIZE = 16;
+private static final int SS_SMERGE_STACKSIZE = 32;
 /* for trsort.c */
-#define TR_INSERTIONSORT_THRESHOLD (8)
-# define TR_STACKSIZE (64)
+private static final int TR_INSERTIONSORT_THRESHOLD = 8;
+private static final int TR_STACKSIZE = 64;
 
 /*- Macros -*/
 private int
