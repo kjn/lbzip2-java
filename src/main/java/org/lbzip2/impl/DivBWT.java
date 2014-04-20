@@ -60,7 +60,7 @@ STACK_PUSH5(int[] stack, int ssize, int a, int b, int c, int d, int e)
 #define BUCKET_B(_c0, _c1) (bucket[((_c1) << 8) | (_c0)])
 #define BUCKET_BSTAR(_c0, _c1) (bucket[((_c0) << 8) | (_c1)])
 /* for trsort.c */
-#define TR_GETC(_p) (((_p) < (num_bstar - depth)) ? ISA[(_p) + depth] : ISA[((_p) + depth) % num_bstar])
+#define TR_GETC(_p) (((_p) < (num_bstar - depth)) ? SA[num_bstar + (_p) + depth] : SA[num_bstar + ((_p) + depth) % num_bstar])
 /* for sssort.c and trsort.c */
 private final int lg_table[256]= {
  -1,0,1,1,2,2,2,2,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,
@@ -855,7 +855,7 @@ tr_ilg(int n) {
 /* Simple insertionsort for small size groups. */
 private
 void
-tr_insertionsort(int *ISA, int depth, int num_bstar,
+tr_insertionsort(int[] SA, int depth, int num_bstar,
                  int *first, int *last) {
   int *a, *b;
   int t, r;
@@ -875,7 +875,7 @@ tr_insertionsort(int *ISA, int depth, int num_bstar,
 
 private
 void
-tr_fixdown(int *ISA, int depth, int num_bstar,
+tr_fixdown(int[] SA, int depth, int num_bstar,
            int *HB, int i, int size) {
   int j, k;
   int v;
@@ -893,7 +893,7 @@ tr_fixdown(int *ISA, int depth, int num_bstar,
 /* Simple top-down heapsort. */
 private
 void
-tr_heapsort(int *ISA, int depth, int num_bstar,
+tr_heapsort(int[] SA, int depth, int num_bstar,
             int *HR, int size) {
   int i, m;
   int t;
@@ -904,11 +904,11 @@ tr_heapsort(int *ISA, int depth, int num_bstar,
     if(TR_GETC(HR[m / 2]) < TR_GETC(HR[m])) { t = HR[m]; HR[m] = HR[m / 2]; HR[m / 2] = t; }
   }
 
-  for(i = m / 2 - 1; 0 <= i; --i) { tr_fixdown(ISA, depth, num_bstar, HR, i, m); }
-  if((size % 2) == 0) { t = HR[0]; HR[0] = HR[m]; HR[m] = t; tr_fixdown(ISA, depth, num_bstar, HR, 0, m); }
+  for(i = m / 2 - 1; 0 <= i; --i) { tr_fixdown(SA, depth, num_bstar, HR, i, m); }
+  if((size % 2) == 0) { t = HR[0]; HR[0] = HR[m]; HR[m] = t; tr_fixdown(SA, depth, num_bstar, HR, 0, m); }
   for(i = m - 1; 0 < i; --i) {
     t = HR[0], HR[0] = HR[i];
-    tr_fixdown(ISA, depth, num_bstar, HR, 0, i);
+    tr_fixdown(SA, depth, num_bstar, HR, 0, i);
     HR[i] = t;
   }
 }
@@ -919,7 +919,7 @@ tr_heapsort(int *ISA, int depth, int num_bstar,
 /* Returns the median of three elements. */
 private
 int *
-tr_median3(int *ISA, int depth, int num_bstar,
+tr_median3(int[] SA, int depth, int num_bstar,
            int *v1, int *v2, int *v3) {
   int *t;
   if(TR_GETC(*v1) > TR_GETC(*v2)) { t = v1; v1 = v2; v2 = t; }
@@ -933,7 +933,7 @@ tr_median3(int *ISA, int depth, int num_bstar,
 /* Returns the median of five elements. */
 private
 int *
-tr_median5(int *ISA, int depth, int num_bstar,
+tr_median5(int[] SA, int depth, int num_bstar,
            int *v1, int *v2, int *v3, int *v4, int *v5) {
   int *t;
   if(TR_GETC(*v2) > TR_GETC(*v3)) { t = v2; v2 = v3; v3 = t; }
@@ -948,7 +948,7 @@ tr_median5(int *ISA, int depth, int num_bstar,
 /* Returns the pivot element. */
 private
 int *
-tr_pivot(int *ISA, int depth, int num_bstar,
+tr_pivot(int[] SA, int depth, int num_bstar,
          int *first, int *last) {
   int *middle;
   int t;
@@ -958,17 +958,17 @@ tr_pivot(int *ISA, int depth, int num_bstar,
 
   if(t <= 512) {
     if(t <= 32) {
-      return tr_median3(ISA, depth, num_bstar, first, middle, last - 1);
+      return tr_median3(SA, depth, num_bstar, first, middle, last - 1);
     } else {
       t >>= 2;
-      return tr_median5(ISA, depth, num_bstar, first, first + t, middle, last - 1 - t, last - 1);
+      return tr_median5(SA, depth, num_bstar, first, first + t, middle, last - 1 - t, last - 1);
     }
   }
   t >>= 3;
-  first  = tr_median3(ISA, depth, num_bstar, first, first + t, first + (t << 1));
-  middle = tr_median3(ISA, depth, num_bstar, middle - t, middle, middle + t);
-  last   = tr_median3(ISA, depth, num_bstar, last - 1 - (t << 1), last - 1 - t, last - 1);
-  return tr_median3(ISA, depth, num_bstar, first, middle, last);
+  first  = tr_median3(SA, depth, num_bstar, first, first + t, first + (t << 1));
+  middle = tr_median3(SA, depth, num_bstar, middle - t, middle, middle + t);
+  last   = tr_median3(SA, depth, num_bstar, last - 1 - (t << 1), last - 1 - t, last - 1);
+  return tr_median3(SA, depth, num_bstar, first, middle, last);
 }
 
 
@@ -1004,7 +1004,7 @@ trbudget_check(trbudget_t *budget, int size) {
 
 private
 void
-tr_partition(int *ISA, int depth, int num_bstar,
+tr_partition(int[] SA, int depth, int num_bstar,
              int *first, int *middle, int *last,
              int **pa, int **pb, int v) {
   int *a, *b, *c, *d, *e, *f;
@@ -1046,7 +1046,7 @@ tr_partition(int *ISA, int depth, int num_bstar,
 
 private
 void
-tr_copy(int *ISA, int num_bstar, int *SA,
+tr_copy(int[] SA, int num_bstar, int *SA,
         int *first, int *a, int *b, int *last,
         int depth) {
   /* sort suffixes of middle partition
@@ -1057,23 +1057,23 @@ tr_copy(int *ISA, int num_bstar, int *SA,
   v = b - SA - 1;
   for(c = first, d = a - 1; c <= d; ++c) {
     if((s = *c - depth) < 0) { s += num_bstar; }
-    if(ISA[s] == v) {
+    if(SA[num_bstar + s] == v) {
       *++d = s;
-      ISA[s] = d - SA;
+      SA[num_bstar + s] = d - SA;
     }
   }
   for(c = last - 1, e = d + 1, d = b; e < d; --c) {
     if((s = *c - depth) < 0) { s += num_bstar; }
-    if(ISA[s] == v) {
+    if(SA[num_bstar + s] == v) {
       *--d = s;
-      ISA[s] = d - SA;
+      SA[num_bstar + s] = d - SA;
     }
   }
 }
 
 private
 void
-tr_partialcopy(int *ISA, int num_bstar, int *SA,
+tr_partialcopy(int[] SA, int num_bstar, int *SA,
                int *first, int *a, int *b, int *last,
                int depth) {
   int *c, *d, *e;
@@ -1085,38 +1085,38 @@ tr_partialcopy(int *ISA, int num_bstar, int *SA,
   for(c = first, d = a - 1; c <= d; ++c) {
     t = *c;
     if((s = t - depth) < 0) { s += num_bstar; }
-    if(ISA[s] == v) {
+    if(SA[num_bstar + s] == v) {
       *++d = s;
-      rank = ISA[t];
+      rank = SA[num_bstar + t];
       if(lastrank != rank) { lastrank = rank; newrank = d - SA; }
-      ISA[s] = newrank;
+      SA[num_bstar + s] = newrank;
     }
   }
 
   lastrank = -1;
   for(e = d; first <= e; --e) {
-    rank = ISA[*e];
+    rank = SA[num_bstar + *e];
     if(lastrank != rank) { lastrank = rank; newrank = e - SA; }
-    if(newrank != rank) { ISA[*e] = newrank; }
+    if(newrank != rank) { SA[num_bstar + *e] = newrank; }
   }
 
   lastrank = -1;
   for(c = last - 1, e = d + 1, d = b; e < d; --c) {
     t = *c;
     if((s = t - depth) < 0) { s += num_bstar; }
-    if(ISA[s] == v) {
+    if(SA[num_bstar + s] == v) {
       *--d = s;
-      rank = ISA[t];
+      rank = SA[num_bstar + t];
       if(lastrank != rank) { lastrank = rank; newrank = d - SA; }
-      ISA[s] = newrank;
+      SA[num_bstar + s] = newrank;
     }
   }
 }
 
 private
 void
-tr_introsort(int *ISA, int depth, int num_bstar,
-             int *SA, int *first, int *last,
+tr_introsort(int[] SA, int depth, int num_bstar,
+             int *first, int *last,
              trbudget_t *budget) {
   int[] stack = new int[5 * TR_STACKSIZE];
   int *a, *b, *c;
@@ -1132,14 +1132,14 @@ tr_introsort(int *ISA, int depth, int num_bstar,
     if(limit < 0) {
       if(limit == -1) {
         /* tandem repeat partition */
-        tr_partition(ISA, depth - incr, num_bstar, first, first, last, &a, &b, last - SA - 1);
+        tr_partition(SA, depth - incr, num_bstar, first, first, last, &a, &b, last - SA - 1);
 
         /* update ranks */
         if(a < last) {
-          for(c = first, v = a - SA - 1; c < a; ++c) { ISA[*c] = v; }
+          for(c = first, v = a - SA - 1; c < a; ++c) { SA[num_bstar + *c] = v; }
         }
         if(b < last) {
-          for(c = a, v = b - SA - 1; c < b; ++c) { ISA[*c] = v; }
+          for(c = a, v = b - SA - 1; c < b; ++c) { SA[num_bstar + *c] = v; }
         }
 
         /* push */
@@ -1190,10 +1190,10 @@ tr_introsort(int *ISA, int depth, int num_bstar,
         limit = stack[ssize - 2];
         ssize -= 5;
         if(limit == 0) {
-          tr_copy(ISA, num_bstar, SA, first, a, b, last, depth);
+          tr_copy(SA, num_bstar, SA, first, a, b, last, depth);
         } else {
           if(0 <= trlink) { stack[trlink + 3] = -1; }
-          tr_partialcopy(ISA, num_bstar, SA, first, a, b, last, depth);
+          tr_partialcopy(SA, num_bstar, SA, first, a, b, last, depth);
         }
         // STACK_POP5(depth, first, last, limit, trlink)
         if(ssize == 0) return;
@@ -1207,13 +1207,13 @@ tr_introsort(int *ISA, int depth, int num_bstar,
         /* sorted partition */
         if(0 <= *first) {
           a = first;
-          do { ISA[*a] = a - SA; } while((++a < last) && (0 <= *a));
+          do { SA[num_bstar + *a] = a - SA; } while((++a < last) && (0 <= *a));
           first = a;
         }
         if(first < last) {
           a = first; do { *a = ~*a; } while(*++a < 0);
-          next = (incr < (num_bstar - depth)) ? ((ISA[*a] != TR_GETC(*a)) ? tr_ilg(a - first + 1) : -1) : -3;
-          if(++a < last) { for(b = first, v = a - SA - 1; b < a; ++b) { ISA[*b] = v; } }
+          next = (incr < (num_bstar - depth)) ? ((SA[num_bstar + *a] != TR_GETC(*a)) ? tr_ilg(a - first + 1) : -1) : -3;
+          if(++a < last) { for(b = first, v = a - SA - 1; b < a; ++b) { SA[num_bstar + *b] = v; } }
 
           /* push */
           if(trbudget_check(budget, a - first)) {
@@ -1258,13 +1258,13 @@ tr_introsort(int *ISA, int depth, int num_bstar,
     }
 
     if((last - first) <= TR_INSERTIONSORT_THRESHOLD) {
-      tr_insertionsort(ISA, depth, num_bstar, first, last);
+      tr_insertionsort(SA, depth, num_bstar, first, last);
       limit = -3;
       continue;
     }
 
     if(limit-- == 0) {
-      tr_heapsort(ISA, depth, num_bstar, first, last - first);
+      tr_heapsort(SA, depth, num_bstar, first, last - first);
       for(a = last - 1; first < a; a = b) {
         for(x = TR_GETC(*a), b = a - 1; (first <= b) && (TR_GETC(*b) == x); --b) { *b = ~*b; }
       }
@@ -1273,18 +1273,18 @@ tr_introsort(int *ISA, int depth, int num_bstar,
     }
 
     /* choose pivot */
-    a = tr_pivot(ISA, depth, num_bstar, first, last);
+    a = tr_pivot(SA, depth, num_bstar, first, last);
     t = *first; *first = *a; *a = t;
     v = TR_GETC(*first);
 
     /* partition */
-    tr_partition(ISA, depth, num_bstar, first, first + 1, last, &a, &b, v);
+    tr_partition(SA, depth, num_bstar, first, first + 1, last, &a, &b, v);
     if((last - first) != (b - a)) {
-      next = (incr < (num_bstar - depth)) ? ((ISA[*a] != v) ? tr_ilg(b - a) : -1) : -3;
+      next = (incr < (num_bstar - depth)) ? ((SA[num_bstar + *a] != v) ? tr_ilg(b - a) : -1) : -3;
 
       /* update ranks */
-      for(c = first, v = a - SA - 1; c < a; ++c) { ISA[*c] = v; }
-      if(b < last) { for(c = a, v = b - SA - 1; c < b; ++c) { ISA[*c] = v; } }
+      for(c = first, v = a - SA - 1; c < a; ++c) { SA[num_bstar + *c] = v; }
+      if(b < last) { for(c = a, v = b - SA - 1; c < b; ++c) { SA[num_bstar + *c] = v; } }
 
       /* push */
       if((1 < (b - a)) && (trbudget_check(budget, b - a))) {
@@ -1379,7 +1379,7 @@ tr_introsort(int *ISA, int depth, int num_bstar,
       }
     } else {
       if(trbudget_check(budget, last - first)) {
-        limit = (incr < (num_bstar - depth)) ? ((ISA[*first] != TR_GETC(*first)) ? (limit + 1) : -1) : -3;
+        limit = (incr < (num_bstar - depth)) ? ((SA[num_bstar + *first] != TR_GETC(*first)) ? (limit + 1) : -1) : -3;
         depth += incr;
       } else {
         if(0 <= trlink) { stack[trlink + 3] = -1; }
@@ -1404,7 +1404,7 @@ tr_introsort(int *ISA, int depth, int num_bstar,
 /* Tandem repeat sort */
 private
 void
-trsort(int *ISA, int *SA, int n, int depth) {
+trsort(int[] SA, int n, int depth) {
   int *first, *last, *a;
   trbudget_t budget;
   int t, skip, unsorted;
@@ -1420,10 +1420,10 @@ trsort(int *ISA, int *SA, int n, int depth) {
       if((t = *first) < 0) { first -= t; skip += t; }
       else {
         if(skip != 0) { *(first + skip) = skip; skip = 0; }
-        last = SA + ISA[t] + 1;
+        last = SA + SA[num_bstar + t] + 1;
         if(1 < (last - first)) {
           budget.count = 0;
-          tr_introsort(ISA, depth, n, SA, first, last, &budget);
+          tr_introsort(SA, depth, n, first, last, &budget);
           if(budget.count != 0) { unsorted += budget.count; }
           else { skip = first - last; }
         } else if((last - first) == 1) {
@@ -1438,8 +1438,8 @@ trsort(int *ISA, int *SA, int n, int depth) {
       do {
         if((t = *first) < 0) { first -= t; }
         else {
-          last = SA + ISA[t] + 1;
-          for(a = first; a < last; ++a) { ISA[*a] = a - SA; }
+          last = SA + SA[num_bstar + t] + 1;
+          for(a = first; a < last; ++a) { SA[num_bstar + *a] = a - SA; }
           first = last;
         }
       } while(first < (SA + n));
@@ -1459,7 +1459,7 @@ int
 sort_typeBstar(byte *T, int *SA,
                int *bucket, int n) {
   int xpa;
-  int *ISAb, *buf;
+  int *buf;
   int i, j, k, t, m, bufsize;
   int c0, c1;
   int flag;
@@ -1517,7 +1517,7 @@ note:
   }
 
   /* Sort the type B* suffixes by their first two characters. */
-  xpa = n - m; ISAb = SA + m;
+  xpa = n - m;
   for(i = m - 2; 0 <= i; --i) {
     t = SA[xpa + i], c0 = T[t], c1 = T[t + 1];
     SA[--BUCKET_BSTAR(c0, c1)] = i;
@@ -1541,37 +1541,37 @@ note:
   for(i = m - 1; 0 <= i; --i) {
     if(0 <= SA[i]) {
       j = i;
-      do { ISAb[SA[i]] = i; } while((0 <= --i) && (0 <= SA[i]));
+      do { SA[SA[i] + m] = i; } while((0 <= --i) && (0 <= SA[i]));
       SA[i + 1] = i - j;
       if(i <= 0) { break; }
     }
     j = i;
-    do { ISAb[SA[i] = ~SA[i]] = j; } while(SA[--i] < 0);
-    ISAb[SA[i]] = j;
+    do { SA[(SA[i] = ~SA[i]) + m] = j; } while(SA[--i] < 0);
+    SA[SA[i] + m] = j;
   }
 
   /* Construct the inverse suffix array of type B* suffixes using trsort. */
-  trsort(ISAb, SA, m, 1);
+  trsort(SA, m, 1);
 
   /* Set the sorted order of type B* suffixes. */
   i = n - 1, j = m, c0 = T[n - 1], c1 = T[0];
   if((c0 < c1) || ((c0 == c1) && (flag != 0))) {
     t = i;
     for(--i, c1 = c0; (0 <= i) && ((c0 = T[i]) <= c1); --i, c1 = c0) { }
-    if(flag == 0) { SA[ISAb[--j]] = ((1 < (t - i))) ? t : ~t; }
+    if(flag == 0) { SA[SA[--j + m]] = ((1 < (t - i))) ? t : ~t; }
   }
   for(; 0 <= i;) {
     for(--i, c1 = c0; (0 <= i) && ((c0 = T[i]) >= c1); --i, c1 = c0) { }
     if(0 <= i) {
       t = i;
       for(--i, c1 = c0; (0 <= i) && ((c0 = T[i]) <= c1); --i, c1 = c0) { }
-      SA[ISAb[--j]] = ((1 < (t - i))) ? t : ~t;
+      SA[SA[--j + m]] = ((1 < (t - i))) ? t : ~t;
     }
   }
-  if(SA[ISAb[0]] == ~((int)0)) {
+  if(SA[SA[m]] == ~((int)0)) {
     /* check last type */
     if(T[n - 1] <= T[0]) { /* is type B? */
-      SA[ISAb[0]] = 0;
+      SA[SA[m]] = 0;
     }
   }
 
