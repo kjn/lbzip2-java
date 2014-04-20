@@ -139,49 +139,49 @@ ss_isqrt(int x) {
 /* Compares two suffixes. */
 private
 int
-ss_compare(byte *T,
+ss_compare(byte[] T,
            int *p1, int *p2,
            int depth) {
-  byte *U1, *U2, *U1n, *U2n;
+  int U1, U2, U1n, U2n;
 
-  for(U1 = T + depth + *p1,
-      U2 = T + depth + *p2,
-      U1n = T + *(p1 + 1) + 2,
-      U2n = T + *(p2 + 1) + 2;
-      (U1 < U1n) && (U2 < U2n) && (*U1 == *U2);
+  for(U1 = depth + *p1,
+      U2 = depth + *p2,
+      U1n = *(p1 + 1) + 2,
+      U2n = *(p2 + 1) + 2;
+      (U1 < U1n) && (U2 < U2n) && (T[U1] == T[U2]);
       ++U1, ++U2) {
   }
 
   return U1 < U1n ?
-        (U2 < U2n ? *U1 - *U2 : 1) :
+        (U2 < U2n ? T[U1] - T[U2] : 1) :
         (U2 < U2n ? -1 : 0);
 }
 
 private
 int
-ss_compare_last(byte *T, int[] SA, int xpa,
+ss_compare_last(byte[] T, int[] SA, int xpa,
                 int *p1, int *p2,
                 int depth, int size) {
-  byte *U1, *U2, *U1n, *U2n;
+  int U1, U2, U1n, U2n;
 
-  for(U1 = T + depth + *p1,
-      U2 = T + depth + *p2,
-      U1n = T + size,
-      U2n = T + *(p2 + 1) + 2;
-      (U1 < U1n) && (U2 < U2n) && (*U1 == *U2);
+  for(U1 = depth + *p1,
+      U2 = depth + *p2,
+      U1n = size,
+      U2n = *(p2 + 1) + 2;
+      (U1 < U1n) && (U2 < U2n) && (T[U1] == T[U2]);
       ++U1, ++U2) {
   }
 
-  if(U1 < U1n) { return (U2 < U2n) ? *U1 - *U2 : 1; }
+  if(U1 < U1n) { return (U2 < U2n) ? T[U1] - T[U2] : 1; }
   else if(U2 == U2n) { return 1; }
 
-  for(U1 = T + (U1 - T) % size, U1n = T + SA[xpa] + 2;
-      (U1 < U1n) && (U2 < U2n) && (*U1 == *U2);
+  for(U1 = U1 % size, U1n = SA[xpa] + 2;
+      (U1 < U1n) && (U2 < U2n) && (T[U1] == T[U2]);
       ++U1, ++U2) {
   }
 
   return U1 < U1n ?
-        (U2 < U2n ? *U1 - *U2 : 1) :
+        (U2 < U2n ? T[U1] - T[U2] : 1) :
         (U2 < U2n ? -1 : 0);
 
 }
@@ -192,7 +192,7 @@ ss_compare_last(byte *T, int[] SA, int xpa,
 /* Insertionsort for small size groups */
 private
 void
-ss_insertionsort(byte *T, int[] SA, int xpa,
+ss_insertionsort(byte[] T, int[] SA, int xpa,
                  int *first, int *last, int depth) {
   int *i, *j;
   int t;
@@ -331,7 +331,7 @@ ss_partition(int[] SA, int xpa,
 /* Multikey introsort for medium size groups. */
 private
 void
-ss_mintrosort(byte *T, int[] SA, int xpa,
+ss_mintrosort(byte[] T, int[] SA, int xpa,
               int *first, int *last,
               int depth) {
   int[] stack = new int[4 * SS_MISORT_STACKSIZE];
@@ -519,7 +519,7 @@ ss_rotate(int *first, int *middle, int *last) {
 
 private
 void
-ss_inplacemerge(byte *T, int[] SA, int xpa,
+ss_inplacemerge(byte[] T, int[] SA, int xpa,
                 int *first, int *middle, int *last,
                 int depth) {
   int *p;
@@ -562,7 +562,7 @@ ss_inplacemerge(byte *T, int[] SA, int xpa,
 /* Merge-forward with internal buffer. */
 private
 void
-ss_mergeforward(byte *T, int[] SA, int xpa,
+ss_mergeforward(byte[] T, int[] SA, int xpa,
                 int *first, int *middle, int *last,
                 int *buf, int depth) {
   int *a, *b, *c, *bufend;
@@ -612,7 +612,7 @@ ss_mergeforward(byte *T, int[] SA, int xpa,
 /* Merge-backward with internal buffer. */
 private
 void
-ss_mergebackward(byte *T, int[] SA, int xpa,
+ss_mergebackward(byte[] T, int[] SA, int xpa,
                  int *first, int *middle, int *last,
                  int *buf, int depth) {
   int *p1, *p2;
@@ -671,7 +671,7 @@ ss_mergebackward(byte *T, int[] SA, int xpa,
 /* D&C based merge. */
 private
 void
-ss_swapmerge(byte *T, int[] SA, int xpa,
+ss_swapmerge(byte[] T, int[] SA, int xpa,
              int *first, int *middle, int *last,
              int *buf, int bufsize, int depth) {
 #define GETIDX(a) ((0 <= (a)) ? (a) : (~(a)))
@@ -779,7 +779,7 @@ ss_swapmerge(byte *T, int[] SA, int xpa,
 /* Substring sort */
 private
 void
-sssort(byte *T, int[] SA, int xpa,
+sssort(byte[] T, int[] SA, int xpa,
        int *first, int *last,
        int *buf, int bufsize,
        int depth, int n, int lastsuffix) {
@@ -1456,7 +1456,7 @@ trsort(int[] SA, int n, int depth) {
 /* Sorts suffixes of type B*. */
 private
 int
-sort_typeBstar(byte *T, int *SA,
+sort_typeBstar(byte[] T, int *SA,
                int *bucket, int n) {
   int xpa;
   int *buf;
@@ -1603,7 +1603,7 @@ note:
 
 private
 int
-construct_BWT(byte *T, int *SA,
+construct_BWT(byte[] T, int *SA,
               int *bucket, int n) {
   int *i, *j, *k;
   int s, t, orig = -10;
@@ -1674,7 +1674,7 @@ construct_BWT(byte *T, int *SA,
 /*- Function -*/
 
 int
-divbwt(byte *T, int *SA, int *bucket, int n) {
+divbwt(byte[] T, int[] SA, int[] bucket, int n) {
   int m, pidx, i;
 
   /* Check arguments. */
