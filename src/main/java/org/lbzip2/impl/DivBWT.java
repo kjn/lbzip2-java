@@ -213,15 +213,15 @@ ss_insertionsort(byte *T, int *PA,
 
 private
 void
-ss_fixdown(byte *Td, int *PA,
+ss_fixdown(byte[] T, int depth, int *PA,
            int *SA, int i, int size) {
   int j, k;
   int v;
   int c, d, e;
 
-  for(v = SA[i], c = Td[PA[v]]; (j = 2 * i + 1) < size; SA[i] = SA[k], i = k) {
-    d = Td[PA[SA[k = j++]]];
-    if(d < (e = Td[PA[SA[j]]])) { k = j; d = e; }
+  for(v = SA[i], c = T[PA[v] + depth]; (j = 2 * i + 1) < size; SA[i] = SA[k], i = k) {
+    d = T[PA[SA[k = j++]] + depth];
+    if(d < (e = T[PA[SA[j]] + depth])) { k = j; d = e; }
     if(d <= c) { break; }
   }
   SA[i] = v;
@@ -230,21 +230,21 @@ ss_fixdown(byte *Td, int *PA,
 /* Simple top-down heapsort. */
 private
 void
-ss_heapsort(byte *Td, int *PA, int *SA, int size) {
+ss_heapsort(byte[] T, int depth, int *PA, int *SA, int size) {
   int i, m;
   int t;
 
   m = size;
   if((size % 2) == 0) {
     m--;
-    if(Td[PA[SA[m / 2]]] < Td[PA[SA[m]]]) { t = SA[m]; SA[m] = SA[m / 2]; SA[m / 2] = t; }
+    if(T[PA[SA[m / 2]] + depth] < T[PA[SA[m]] + depth]) { t = SA[m]; SA[m] = SA[m / 2]; SA[m / 2] = t; }
   }
 
-  for(i = m / 2 - 1; 0 <= i; --i) { ss_fixdown(Td, PA, SA, i, m); }
-  if((size % 2) == 0) { t = SA[0]; SA[0] = SA[m]; SA[m] = t; ss_fixdown(Td, PA, SA, 0, m); }
+  for(i = m / 2 - 1; 0 <= i; --i) { ss_fixdown(T, depth, PA, SA, i, m); }
+  if((size % 2) == 0) { t = SA[0]; SA[0] = SA[m]; SA[m] = t; ss_fixdown(T, depth, PA, SA, 0, m); }
   for(i = m - 1; 0 < i; --i) {
     t = SA[0], SA[0] = SA[i];
-    ss_fixdown(Td, PA, SA, 0, i);
+    ss_fixdown(T, depth, PA, SA, 0, i);
     SA[i] = t;
   }
 }
@@ -255,12 +255,12 @@ ss_heapsort(byte *Td, int *PA, int *SA, int size) {
 /* Returns the median of three elements. */
 private
 int *
-ss_median3(byte *Td, int *PA,
+ss_median3(byte[] T, int depth, int *PA,
            int *v1, int *v2, int *v3) {
   int *t;
-  if(Td[PA[*v1]] > Td[PA[*v2]]) { t = v1; v1 = v2; v2 = t; }
-  if(Td[PA[*v2]] > Td[PA[*v3]]) {
-    if(Td[PA[*v1]] > Td[PA[*v3]]) { return v1; }
+  if(T[PA[*v1] + depth] > T[PA[*v2] + depth]) { t = v1; v1 = v2; v2 = t; }
+  if(T[PA[*v2] + depth] > T[PA[*v3] + depth]) {
+    if(T[PA[*v1] + depth] > T[PA[*v3] + depth]) { return v1; }
     else { return v3; }
   }
   return v2;
@@ -269,22 +269,22 @@ ss_median3(byte *Td, int *PA,
 /* Returns the median of five elements. */
 private
 int *
-ss_median5(byte *Td, int *PA,
+ss_median5(byte[] T, int depth, int *PA,
            int *v1, int *v2, int *v3, int *v4, int *v5) {
   int *t;
-  if(Td[PA[*v2]] > Td[PA[*v3]]) { t = v2; v2 = v3; v3 = t; }
-  if(Td[PA[*v4]] > Td[PA[*v5]]) { t = v4; v4 = v5; v5 = t; }
-  if(Td[PA[*v2]] > Td[PA[*v4]]) { t = v2; v2 = v4; v4 = t; t = v3; v3 = v5; v5 = t; }
-  if(Td[PA[*v1]] > Td[PA[*v3]]) { t = v1; v1 = v3; v3 = t; }
-  if(Td[PA[*v1]] > Td[PA[*v4]]) { t = v1; v1 = v4; v4 = t; t = v3; v3 = v5; v5 = t; }
-  if(Td[PA[*v3]] > Td[PA[*v4]]) { return v4; }
+  if(T[PA[*v2] + depth] > T[PA[*v3] + depth]) { t = v2; v2 = v3; v3 = t; }
+  if(T[PA[*v4] + depth] > T[PA[*v5] + depth]) { t = v4; v4 = v5; v5 = t; }
+  if(T[PA[*v2] + depth] > T[PA[*v4] + depth]) { t = v2; v2 = v4; v4 = t; t = v3; v3 = v5; v5 = t; }
+  if(T[PA[*v1] + depth] > T[PA[*v3] + depth]) { t = v1; v1 = v3; v3 = t; }
+  if(T[PA[*v1] + depth] > T[PA[*v4] + depth]) { t = v1; v1 = v4; v4 = t; t = v3; v3 = v5; v5 = t; }
+  if(T[PA[*v3] + depth] > T[PA[*v4] + depth]) { return v4; }
   return v3;
 }
 
 /* Returns the pivot element. */
 private
 int *
-ss_pivot(byte *Td, int *PA, int *first, int *last) {
+ss_pivot(byte[] T, int depth, int *PA, int *first, int *last) {
   int *middle;
   int t;
 
@@ -293,17 +293,17 @@ ss_pivot(byte *Td, int *PA, int *first, int *last) {
 
   if(t <= 512) {
     if(t <= 32) {
-      return ss_median3(Td, PA, first, middle, last - 1);
+      return ss_median3(T, depth, PA, first, middle, last - 1);
     } else {
       t >>= 2;
-      return ss_median5(Td, PA, first, first + t, middle, last - 1 - t, last - 1);
+      return ss_median5(T, depth, PA, first, first + t, middle, last - 1 - t, last - 1);
     }
   }
   t >>= 3;
-  first  = ss_median3(Td, PA, first, first + t, first + (t << 1));
-  middle = ss_median3(Td, PA, middle - t, middle, middle + t);
-  last   = ss_median3(Td, PA, last - 1 - (t << 1), last - 1 - t, last - 1);
-  return ss_median3(Td, PA, first, middle, last);
+  first  = ss_median3(T, depth, PA, first, first + t, first + (t << 1));
+  middle = ss_median3(T, depth, PA, middle - t, middle, middle + t);
+  last   = ss_median3(T, depth, PA, last - 1 - (t << 1), last - 1 - t, last - 1);
+  return ss_median3(T, depth, PA, first, middle, last);
 }
 
 
@@ -335,7 +335,6 @@ ss_mintrosort(byte *T, int *PA,
               int *first, int *last,
               int depth) {
   int[] stack = new int[4 * SS_MISORT_STACKSIZE];
-  byte *Td;
   int *a, *b, *c, *d, *e, *f;
   int s, t;
   int ssize;
@@ -356,17 +355,16 @@ ss_mintrosort(byte *T, int *PA,
       continue;
     }
 
-    Td = T + depth;
-    if(limit-- == 0) { ss_heapsort(Td, PA, first, last - first); }
+    if(limit-- == 0) { ss_heapsort(T, depth, PA, first, last - first); }
     if(limit < 0) {
-      for(a = first + 1, v = Td[PA[*first]]; a < last; ++a) {
-        if((x = Td[PA[*a]]) != v) {
+      for(a = first + 1, v = T[PA[*first] + depth]; a < last; ++a) {
+        if((x = T[PA[*a] + depth]) != v) {
           if(1 < (a - first)) { break; }
           v = x;
           first = a;
         }
       }
-      if(Td[PA[*first] - 1] < v) {
+      if(T[PA[*first] - 1 + depth] < v) {
         first = ss_partition(PA, first, a, depth);
       }
       if((a - first) <= (last - a)) {
@@ -388,29 +386,29 @@ ss_mintrosort(byte *T, int *PA,
     }
 
     /* choose pivot */
-    a = ss_pivot(Td, PA, first, last);
-    v = Td[PA[*a]];
+    a = ss_pivot(T, depth, PA, first, last);
+    v = T[PA[*a] + depth];
     t = *first; *first = *a; *a = t;
 
     /* partition */
-    for(b = first; (++b < last) && ((x = Td[PA[*b]]) == v);) { }
+    for(b = first; (++b < last) && ((x = T[PA[*b] + depth]) == v);) { }
     if(((a = b) < last) && (x < v)) {
-      for(; (++b < last) && ((x = Td[PA[*b]]) <= v);) {
+      for(; (++b < last) && ((x = T[PA[*b] + depth]) <= v);) {
         if(x == v) { t = *b; *b = *a; *a = t; ++a; }
       }
     }
-    for(c = last; (b < --c) && ((x = Td[PA[*c]]) == v);) { }
+    for(c = last; (b < --c) && ((x = T[PA[*c] + depth]) == v);) { }
     if((b < (d = c)) && (x > v)) {
-      for(; (b < --c) && ((x = Td[PA[*c]]) >= v);) {
+      for(; (b < --c) && ((x = T[PA[*c] + depth]) >= v);) {
         if(x == v) { t = *c; *c = *d; *d = t; --d; }
       }
     }
     for(; b < c;) {
       t = *b; *b = *c; *c = t;
-      for(; (++b < c) && ((x = Td[PA[*b]]) <= v);) {
+      for(; (++b < c) && ((x = T[PA[*b] + depth]) <= v);) {
         if(x == v) { t = *b; *b = *a; *a = t; ++a; }
       }
-      for(; (b < --c) && ((x = Td[PA[*c]]) >= v);) {
+      for(; (b < --c) && ((x = T[PA[*c] + depth]) >= v);) {
         if(x == v) { t = *c; *c = *d; *d = t; --d; }
       }
     }
@@ -424,7 +422,7 @@ ss_mintrosort(byte *T, int *PA,
       for(e = b, f = last - s; 0 < s; --s, ++e, ++f) { t = *e; *e = *f; *f = t; }
 
       a = first + (b - a), c = last - (d - c);
-      b = (v <= Td[PA[*a] - 1]) ? a : ss_partition(PA, a, c, depth);
+      b = (v <= T[PA[*a] - 1 + depth]) ? a : ss_partition(PA, a, c, depth);
 
       if((a - first) <= (last - c)) {
         if((last - c) <= (c - b)) {
@@ -457,7 +455,7 @@ ss_mintrosort(byte *T, int *PA,
       }
     } else {
       limit += 1;
-      if(Td[PA[*first] - 1] < v) {
+      if(T[PA[*first] - 1 + depth] < v) {
         first = ss_partition(PA, first, last, depth);
         limit = ss_ilg(last - first);
       }
