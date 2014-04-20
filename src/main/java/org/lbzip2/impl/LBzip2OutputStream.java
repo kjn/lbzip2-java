@@ -15,8 +15,8 @@
  */
 package org.lbzip2.impl;
 
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 
 /**
@@ -149,9 +149,15 @@ public class LBzip2OutputStream
     {
         try
         {
-            OutputStream fos = new FileOutputStream( "out.bz2" );
-            LBzip2OutputStream os = new LBzip2OutputStream( fos, 900000, 10 );
-            os.write( "TEST".getBytes() );
+            InputStream is = System.in;
+            OutputStream os = new LBzip2OutputStream( System.out, 900000, 10 );
+            byte[] buf = new byte[4096];
+            int n;
+            while ( ( n = is.read( buf ) ) > 0 )
+            {
+                os.write( buf, 0, n );
+            }
+            is.close();
             os.close();
         }
         catch ( Throwable e )
