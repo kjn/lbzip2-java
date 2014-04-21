@@ -29,7 +29,7 @@ import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class DivBWT
+final class DivBWT
     implements BWT
 {
     private final Logger logger = LoggerFactory.getLogger( DivBWT.class );
@@ -64,7 +64,7 @@ class DivBWT
     private static final int TR_STACKSIZE = 64;
 
     /*- Macros -*/
-    private int STACK_PUSH( int[] stack, int ssize, int a, int b, int c, int d )
+    private final int STACK_PUSH( final int[] stack, final int ssize, final int a, final int b, final int c, final int d )
     {
         stack[ssize] = a;
         stack[ssize + 1] = b;
@@ -73,7 +73,8 @@ class DivBWT
         return ssize + 4;
     }
 
-    private int STACK_PUSH5( int[] stack, int ssize, int a, int b, int c, int d, int e )
+    private final int STACK_PUSH5( final int[] stack, final int ssize, final int a, final int b, final int c,
+                                   final int d, final int e )
     {
         stack[ssize] = a;
         stack[ssize + 1] = b;
@@ -84,58 +85,58 @@ class DivBWT
     }
 
     /* for divsufsort.c */
-    private int BUCKET_A( int[] bucket, int c0 )
+    private final int BUCKET_A( final int[] bucket, final int c0 )
     {
         return bucket[c0 + BUCKET_A_BIAS];
     }
 
-    private void BUCKET_A_SET( int[] bucket, int c0, int value )
+    private final void BUCKET_A_SET( final int[] bucket, final int c0, final int value )
     {
         bucket[c0 + BUCKET_A_BIAS] = value;
     }
 
-    private void BUCKET_A_INC( int[] bucket, int c0 )
+    private final void BUCKET_A_INC( final int[] bucket, final int c0 )
     {
         ++bucket[c0 + BUCKET_A_BIAS];
     }
 
-    private int BUCKET_B( int[] bucket, int c0, int c1 )
+    private final int BUCKET_B( final int[] bucket, final int c0, final int c1 )
     {
         return bucket[( c1 << 8 ) + c0 + BUCKET_B_BIAS];
     }
 
-    private void BUCKET_B_SET( int[] bucket, int c0, int c1, int value )
+    private final void BUCKET_B_SET( final int[] bucket, final int c0, final int c1, final int value )
     {
         bucket[( c1 << 8 ) + c0 + BUCKET_B_BIAS] = value;
     }
 
-    private void BUCKET_B_INC( int[] bucket, int c0, int c1 )
+    private final void BUCKET_B_INC( final int[] bucket, final int c0, final int c1 )
     {
         ++bucket[( c1 << 8 ) + c0 + BUCKET_B_BIAS];
     }
 
-    private int BUCKET_BSTAR( int[] bucket, int c0, int c1 )
+    private final int BUCKET_BSTAR( final int[] bucket, final int c0, final int c1 )
     {
         return bucket[( c0 << 8 ) + c1 + BUCKET_B_BIAS];
     }
 
-    private void BUCKET_BSTAR_SET( int[] bucket, int c0, int c1, int value )
+    private final void BUCKET_BSTAR_SET( final int[] bucket, final int c0, final int c1, final int value )
     {
         bucket[( c0 << 8 ) + c1 + BUCKET_B_BIAS] = value;
     }
 
-    private void BUCKET_BSTAR_INC( int[] bucket, int c0, int c1 )
+    private final void BUCKET_BSTAR_INC( final int[] bucket, final int c0, final int c1 )
     {
         ++bucket[( c0 << 8 ) + c1 + BUCKET_B_BIAS];
     }
 
-    private int BUCKET_BSTAR_DEC( int[] bucket, int c0, int c1 )
+    private final int BUCKET_BSTAR_DEC( final int[] bucket, final int c0, final int c1 )
     {
         return --bucket[( c0 << 8 ) + c1 + BUCKET_B_BIAS];
     }
 
     /* for trsort.c */
-    private int TR_GETC( int[] SA, int depth, int num_bstar, int p )
+    private final int TR_GETC( final int[] SA, final int depth, final int num_bstar, final int p )
     {
         return ( p < ( num_bstar - depth ) ) ? SA[num_bstar + p + depth] : SA[num_bstar + ( p + depth ) % num_bstar];
     }
@@ -154,7 +155,7 @@ class DivBWT
 
     /*- Private Functions -*/
 
-    private int ss_ilg( int n )
+    private final int ss_ilg( final int n )
     {
         return ( n & 0xff00 ) != 0 ? 8 + lg_table[( n >> 8 ) & 0xff] : 0 + lg_table[( n >> 0 ) & 0xff];
     }
@@ -172,7 +173,7 @@ class DivBWT
         237, 237, 238, 238, 239, 240, 240, 241, 241, 242, 242, 243, 243, 244, 244, 245, 245, 246, 246, 247, 247, 248,
         248, 249, 249, 250, 250, 251, 251, 252, 252, 253, 253, 254, 254, 255 };
 
-    private int ss_isqrt( int x )
+    private final int ss_isqrt( final int x )
     {
         int y, e;
 
@@ -210,7 +211,7 @@ class DivBWT
     /*---------------------------------------------------------------------------*/
 
     /* Compares two suffixes. */
-    private int ss_compare( byte[] T, int[] SA, int p1, int p2, int depth )
+    private final int ss_compare( final byte[] T, final int[] SA, final int p1, final int p2, final int depth )
     {
         int U1, U2, U1n, U2n;
 
@@ -222,7 +223,8 @@ class DivBWT
         return U1 < U1n ? ( U2 < U2n ? T[U1] - T[U2] : 1 ) : ( U2 < U2n ? -1 : 0 );
     }
 
-    private int ss_compare_last( byte[] T, int[] SA, int xpa, int p1, int p2, int depth, int size )
+    private final int ss_compare_last( final byte[] T, final int[] SA, final int xpa, final int p1, final int p2,
+                                       final int depth, final int size )
     {
         int U1, U2, U1n, U2n;
 
@@ -251,7 +253,8 @@ class DivBWT
     /*---------------------------------------------------------------------------*/
 
     /* Insertionsort for small size groups */
-    private void ss_insertionsort( byte[] T, int[] SA, int xpa, int first, int last, int depth )
+    private final void ss_insertionsort( final byte[] T, final int[] SA, final int xpa, final int first,
+                                         final int last, final int depth )
     {
         int i, j;
         int t;
@@ -281,7 +284,8 @@ class DivBWT
 
     /*---------------------------------------------------------------------------*/
 
-    private void ss_fixdown( byte[] T, int depth, int[] SA, int xpa, int root, int i, int size )
+    private final void ss_fixdown( final byte[] T, final int depth, final int[] SA, final int xpa, final int root,
+                                   int i, final int size )
     {
         int j, k;
         int v;
@@ -305,7 +309,8 @@ class DivBWT
     }
 
     /* Simple top-down heapsort. */
-    private void ss_heapsort( byte[] T, int depth, int[] SA, int xpa, int root, int size )
+    private final void ss_heapsort( final byte[] T, final int depth, final int[] SA, final int xpa, final int root,
+                                    final int size )
     {
         int i, m;
         int t;
@@ -345,7 +350,8 @@ class DivBWT
     /*---------------------------------------------------------------------------*/
 
     /* Returns the median of three elements. */
-    private int ss_median3( byte[] T, int depth, int[] SA, int xpa, int v1, int v2, int v3 )
+    private final int ss_median3( final byte[] T, final int depth, final int[] SA, final int xpa, int v1, int v2,
+                                  final int v3 )
     {
         int t;
         if ( T[SA[xpa + SA[v1]] + depth] > T[SA[xpa + SA[v2]] + depth] )
@@ -369,7 +375,8 @@ class DivBWT
     }
 
     /* Returns the median of five elements. */
-    private int ss_median5( byte[] T, int depth, int[] SA, int xpa, int v1, int v2, int v3, int v4, int v5 )
+    private final int ss_median5( final byte[] T, final int depth, final int[] SA, final int xpa, int v1, int v2,
+                                  int v3, int v4, int v5 )
     {
         int t;
         if ( T[SA[xpa + SA[v2]] + depth] > T[SA[xpa + SA[v3]] + depth] )
@@ -416,7 +423,7 @@ class DivBWT
     }
 
     /* Returns the pivot element. */
-    private int ss_pivot( byte[] T, int depth, int[] SA, int xpa, int first, int last )
+    private final int ss_pivot( final byte[] T, final int depth, final int[] SA, final int xpa, int first, int last )
     {
         int middle;
         int t;
@@ -446,7 +453,7 @@ class DivBWT
     /*---------------------------------------------------------------------------*/
 
     /* Binary partition for substrings. */
-    private int ss_partition( int[] SA, int xpa, int first, int last, int depth )
+    private final int ss_partition( final int[] SA, final int xpa, final int first, final int last, final int depth )
     {
         int a, b;
         int t;
@@ -475,9 +482,9 @@ class DivBWT
     }
 
     /* Multikey introsort for medium size groups. */
-    private void ss_mintrosort( byte[] T, int[] SA, int xpa, int first, int last, int depth )
+    private final void ss_mintrosort( final byte[] T, final int[] SA, final int xpa, int first, int last, int depth )
     {
-        int[] stack = new int[4 * SS_MISORT_STACKSIZE];
+        final int[] stack = new int[4 * SS_MISORT_STACKSIZE];
         int a, b, c, d, e, f;
         int s, t;
         int ssize;
@@ -719,7 +726,7 @@ class DivBWT
 
     /*---------------------------------------------------------------------------*/
 
-    private void ss_blockswap( int[] SA, int a, int b, int n )
+    private final void ss_blockswap( final int[] SA, int a, int b, int n )
     {
         int t;
         for ( ; 0 < n; --n, ++a, ++b )
@@ -730,7 +737,7 @@ class DivBWT
         }
     }
 
-    private void ss_rotate( int[] SA, int first, int middle, int last )
+    private final void ss_rotate( final int[] SA, int first, final int middle, int last )
     {
         int a, b, t;
         int l, r;
@@ -796,7 +803,8 @@ class DivBWT
 
     /*---------------------------------------------------------------------------*/
 
-    private void ss_inplacemerge( byte[] T, int[] SA, int xpa, int first, int middle, int last, int depth )
+    private final void ss_inplacemerge( final byte[] T, final int[] SA, final int xpa, final int first, int middle,
+                                        int last, final int depth )
     {
         int p;
         int a, b;
@@ -861,7 +869,8 @@ class DivBWT
     /*---------------------------------------------------------------------------*/
 
     /* Merge-forward with internal buffer. */
-    private void ss_mergeforward( byte[] T, int[] SA, int xpa, int first, int middle, int last, int buf, int depth )
+    private final void ss_mergeforward( final byte[] T, final int[] SA, final int xpa, final int first,
+                                        final int middle, final int last, final int buf, final int depth )
     {
         int a, b, c, bufend;
         int t;
@@ -944,7 +953,8 @@ class DivBWT
     }
 
     /* Merge-backward with internal buffer. */
-    private void ss_mergebackward( byte[] T, int[] SA, int xpa, int first, int middle, int last, int buf, int depth )
+    private final void ss_mergebackward( final byte[] T, final int[] SA, final int xpa, final int first,
+                                         final int middle, final int last, final int buf, final int depth )
     {
         int p1, p2;
         int a, b, c, bufend;
@@ -1105,12 +1115,13 @@ class DivBWT
         }
     }
 
-    private int GETIDX( int a )
+    private final int GETIDX( final int a )
     {
         return 0 <= a ? a : ~a;
     }
 
-    private void MERGE_CHECK( byte[] T, int[] SA, int xpa, int depth, int a, int b, int c )
+    private final void MERGE_CHECK( final byte[] T, final int[] SA, final int xpa, final int depth, final int a,
+                                    final int b, final int c )
     {
         if ( ( c & 1 ) != 0
             || ( ( c & 2 ) != 0 && ( ss_compare( T, SA, xpa + GETIDX( SA[a - 1] ), xpa + SA[a], depth ) == 0 ) ) )
@@ -1124,10 +1135,10 @@ class DivBWT
     }
 
     /* D&C based merge. */
-    private void ss_swapmerge( byte[] T, int[] SA, int xpa, int first, int middle, int last, int buf, int bufsize,
-                               int depth )
+    private final void ss_swapmerge( final byte[] T, final int[] SA, final int xpa, int first, int middle, int last,
+                                     final int buf, final int bufsize, final int depth )
     {
-        int[] stack = new int[4 * SS_SMERGE_STACKSIZE];
+        final int[] stack = new int[4 * SS_SMERGE_STACKSIZE];
         int l, r, lm, rm;
         int m, len, half;
         int ssize;
@@ -1254,8 +1265,8 @@ class DivBWT
     /*- Function -*/
 
     /* Substring sort */
-    private void sssort( byte[] T, int[] SA, int xpa, int first, int last, int buf, int bufsize, int depth, int n,
-                         boolean lastsuffix )
+    private final void sssort( final byte[] T, final int[] SA, final int xpa, int first, final int last, int buf,
+                               int bufsize, final int depth, final int n, final boolean lastsuffix )
     {
         int a;
         int b, middle, curbuf;
@@ -1333,7 +1344,7 @@ class DivBWT
 
     /*- Private Functions -*/
 
-    private int tr_ilg( int n )
+    private final int tr_ilg( final int n )
     {
         return ( n & 0xffff0000 ) != 0 ? ( ( n & 0xff000000 ) != 0 ? 24 + lg_table[( n >> 24 ) & 0xff]
                         : 16 + lg_table[( n >> 16 ) & 0xff] )
@@ -1343,7 +1354,8 @@ class DivBWT
     /*---------------------------------------------------------------------------*/
 
     /* Simple insertionsort for small size groups. */
-    private void tr_insertionsort( int[] SA, int depth, int num_bstar, int first, int last )
+    private final void tr_insertionsort( final int[] SA, final int depth, final int num_bstar, final int first,
+                                         final int last )
     {
         int a, b;
         int t, r;
@@ -1373,7 +1385,8 @@ class DivBWT
 
     /*---------------------------------------------------------------------------*/
 
-    private void tr_fixdown( int[] SA, int depth, int num_bstar, int root, int i, int size )
+    private final void tr_fixdown( final int[] SA, final int depth, final int num_bstar, final int root, int i,
+                                   final int size )
     {
         int j, k;
         int v;
@@ -1398,7 +1411,7 @@ class DivBWT
     }
 
     /* Simple top-down heapsort. */
-    private void tr_heapsort( int[] SA, int depth, int num_bstar, int root, int size )
+    private final void tr_heapsort( final int[] SA, final int depth, final int num_bstar, final int root, final int size )
     {
         int i, m;
         int t;
@@ -1438,7 +1451,7 @@ class DivBWT
     /*---------------------------------------------------------------------------*/
 
     /* Returns the median of three elements. */
-    private int tr_median3( int[] SA, int depth, int num_bstar, int v1, int v2, int v3 )
+    private final int tr_median3( final int[] SA, final int depth, final int num_bstar, int v1, int v2, final int v3 )
     {
         int t;
         if ( TR_GETC( SA, depth, num_bstar, SA[v1] ) > TR_GETC( SA, depth, num_bstar, SA[v2] ) )
@@ -1462,7 +1475,8 @@ class DivBWT
     }
 
     /* Returns the median of five elements. */
-    private int tr_median5( int[] SA, int depth, int num_bstar, int v1, int v2, int v3, int v4, int v5 )
+    private final int tr_median5( final int[] SA, final int depth, final int num_bstar, int v1, int v2, int v3, int v4,
+                                  int v5 )
     {
         int t;
         if ( TR_GETC( SA, depth, num_bstar, SA[v2] ) > TR_GETC( SA, depth, num_bstar, SA[v3] ) )
@@ -1509,7 +1523,7 @@ class DivBWT
     }
 
     /* Returns the pivot element. */
-    private int tr_pivot( int[] SA, int depth, int num_bstar, int first, int last )
+    private final int tr_pivot( final int[] SA, final int depth, final int num_bstar, int first, int last )
     {
         int middle;
         int t;
@@ -1546,13 +1560,13 @@ class DivBWT
 
     int count;
 
-    private void trbudget_init( int chance, int incval )
+    private final void trbudget_init( final int chance, final int incval )
     {
         this.chance = chance;
         this.remain = this.incval = incval;
     }
 
-    private boolean trbudget_check( int size )
+    private final boolean trbudget_check( final int size )
     {
         if ( size <= this.remain )
         {
@@ -1571,7 +1585,8 @@ class DivBWT
 
     /*---------------------------------------------------------------------------*/
 
-    private long tr_partition( int[] SA, int depth, int num_bstar, int first, int middle, int last, int v )
+    private final long tr_partition( final int[] SA, final int depth, final int num_bstar, int first, final int middle,
+                                     int last, final int v )
     {
         int a, b, c, d, e, f;
         int t, s;
@@ -1665,7 +1680,8 @@ class DivBWT
         return ( (long) first << 32 ) + last;
     }
 
-    private void tr_copy( int[] SA, int num_bstar, int first, int a, int b, int last, int depth )
+    private final void tr_copy( final int[] SA, final int num_bstar, final int first, final int a, final int b,
+                                final int last, final int depth )
     {
         /*
          * sort suffixes of middle partition by using sorted order of suffixes of left and right partition.
@@ -1700,7 +1716,8 @@ class DivBWT
         }
     }
 
-    private void tr_partialcopy( int[] SA, int num_bstar, int first, int a, int b, int last, int depth )
+    private final void tr_partialcopy( final int[] SA, final int num_bstar, final int first, final int a, final int b,
+                                       final int last, final int depth )
     {
         int c, d, e;
         int s, v, t;
@@ -1765,13 +1782,13 @@ class DivBWT
         }
     }
 
-    private void tr_introsort( int[] SA, int depth, int num_bstar, int first, int last )
+    private final void tr_introsort( final int[] SA, int depth, final int num_bstar, int first, int last )
     {
-        int[] stack = new int[5 * TR_STACKSIZE];
+        final int[] stack = new int[5 * TR_STACKSIZE];
         int a, b, c;
         int t;
         int v, x = 0;
-        int incr = depth;
+        final int incr = depth;
         int limit, next;
         int ssize, trlink = -1;
         long range;
@@ -2247,7 +2264,7 @@ class DivBWT
     /*- Function -*/
 
     /* Tandem repeat sort */
-    private void trsort( int[] SA, int n, int depth )
+    private final void trsort( final int[] SA, final int n, int depth )
     {
         int first, last, a;
         int t, skip, unsorted;
@@ -2340,7 +2357,7 @@ class DivBWT
     /*- Private Functions -*/
 
     /* Sorts suffixes of type B*. */
-    private int sort_typeBstar( byte[] T, int[] SA, int[] bucket, int n )
+    private final int sort_typeBstar( final byte[] T, final int[] SA, final int[] bucket, final int n )
     {
         int xpa;
         int buf;
@@ -2576,7 +2593,7 @@ class DivBWT
         return m;
     }
 
-    private int construct_BWT( byte[] T, int[] SA, int[] bucket, int n )
+    private final int construct_BWT( final byte[] T, final int[] SA, final int[] bucket, final int n )
     {
         int i, j, k;
         int s, t, orig = -10;
@@ -2682,7 +2699,7 @@ class DivBWT
 
     /*- Function -*/
 
-    public int transform( byte[] T, int[] SA, int n )
+    public final int transform( final byte[] T, final int[] SA, final int n )
     {
         int m, pidx, i;
 
@@ -2698,7 +2715,7 @@ class DivBWT
 
         T[n] = T[0];
 
-        int[] bucket = new int[ALPHABET_SIZE * ALPHABET_SIZE + ALPHABET_SIZE];
+        final int[] bucket = new int[ALPHABET_SIZE * ALPHABET_SIZE + ALPHABET_SIZE];
 
         for ( i = 0; i <= n; i++ )
             T[i] += CHARACTER_BIAS;
