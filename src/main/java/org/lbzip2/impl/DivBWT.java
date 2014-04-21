@@ -81,7 +81,7 @@ TR_GETC(int[] SA, int depth, int num_bstar, int p)
   return (p < (num_bstar - depth)) ? SA[num_bstar + p + depth] : SA[num_bstar + (p + depth) % num_bstar];
 }
 /* for sssort.c and trsort.c */
-private final int lg_table[256]= {
+private final int[] lg_table=new int[] {
  -1,0,1,1,2,2,2,2,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,
   5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,
   6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,
@@ -106,7 +106,7 @@ ss_ilg(int n) {
 }
 
 
-private final int sqq_table[256] = {
+private final int[] sqq_table = new int[] {
   0,  16,  22,  27,  32,  35,  39,  42,  45,  48,  50,  53,  55,  57,  59,  61,
  64,  65,  67,  69,  71,  73,  75,  76,  78,  80,  81,  83,  84,  86,  87,  89,
  90,  91,  93,  94,  96,  97,  98,  99, 101, 102, 103, 104, 106, 107, 108, 109,
