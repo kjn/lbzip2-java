@@ -114,4 +114,9 @@ final class Utils
             P[b1] = t;
         }
     }
+
+    private Utils()
+    {
+        // This class is not supposed to be instantiated.
+    }
 }
