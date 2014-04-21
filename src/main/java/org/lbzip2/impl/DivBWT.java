@@ -20,8 +20,10 @@
   along with lbzip2.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+package org.lbzip2.impl;
 import static java.lang.Math.*;
 
+class DivBWT {
 private static final boolean DEBUG = true;
 
 /*- Settings -*/
@@ -1722,4 +1724,5 @@ divbwt(byte[] T, int[] SA, int[] bucket, int n) {
   }
 
   return pidx;
+}
 }
