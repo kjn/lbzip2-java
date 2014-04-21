@@ -25,7 +25,11 @@ import static java.lang.Math.*;
 
 import java.util.Arrays;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 class DivBWT implements BWT {
+private final Logger logger = LoggerFactory.getLogger( DivBWT.class );
 private static final boolean DEBUG = true;
 
 /*- Settings -*/
@@ -1481,6 +1485,7 @@ trsort(int[] SA, int n, int depth) {
   if (-n >= SA[0]) { return; }
   trbudget_init(tr_ilg(n) * 2 / 3, n);
   for(;; depth += depth) {
+    logger.trace("    Tandem repeat sort at depth {}", depth);
     assert(n > depth);
     first = 0;
     skip = 0;
@@ -1503,6 +1508,7 @@ trsort(int[] SA, int n, int depth) {
     } while(first < n);
     if(skip != 0) { SA[first + skip] = skip; }
     if(unsorted == 0 || -n >= SA[0]) { break; }
+    logger.trace("      {} tandem repeats still remain unsorted", unsorted);
     if(n <= (depth) * 2) {
       do {
         if((t = SA[first]) < 0) { first -= t; }
@@ -1515,6 +1521,8 @@ trsort(int[] SA, int n, int depth) {
       break;
     }
   }
+
+  logger.trace("    Tandem repeat sort done");
 }
 
 
@@ -1532,6 +1540,8 @@ sort_typeBstar(byte[] T, int[] SA,
   int i, j, k, t, m, bufsize;
   int c0, c1;
   int flag;
+
+  logger.trace("  Bucket sorting...");
 
   /* Initialize bucket arrays. */
   Arrays.fill( bucket, 0 );
@@ -1566,12 +1576,21 @@ sort_typeBstar(byte[] T, int[] SA,
   }
   m = n - m;
   assert(m <= n/2);
+  if (logger.isTraceEnabled()) {
+      int num_a = 0;
+      for (int c = FIRST_CHAR; c <= LAST_CHAR; c++) num_a += BUCKET_A(bucket, c);
+      logger.trace("    Number of type A  suffixes: {} ({} %)", num_a, String.format("%.2f", 100.0*num_a/n));
+      logger.trace("    Number of type B  suffixes: {} ({} %)", n - num_a, String.format("%.2f", 100.0*(n - num_a)/n));
+      logger.trace("    Number of type B* suffixes: {} ({} %, {} % of type B suffixes)", m, String.format("%.2f", 100.0*m/n), String.format("%.2f", 100.0*m/(n - num_a)));
+  }
   if(m == 0) { return 0; }
 /*
 note:
   A type B* suffix is lexicographically smaller than a type B suffix that
   begins with the same first two characters.
 */
+
+  logger.trace("  Sorting B* suffixes...");
 
   /* Calculate the index of start/end point of each bucket. */
   for(c0 = FIRST_CHAR, i = 0, j = 0; c0 <= LAST_CHAR; ++c0) {
@@ -1618,6 +1637,8 @@ note:
     do { SA[(SA[i] = ~SA[i]) + m] = j; } while(SA[--i] < 0);
     SA[SA[i] + m] = j;
   }
+
+  logger.trace("  Constructing ISA...");
 
   /* Construct the inverse suffix array of type B* suffixes using trsort. */
   trsort(SA, m, 1);
@@ -1677,6 +1698,8 @@ construct_BWT(byte[] T, int[] SA,
   int i, j, k;
   int s, t, orig = -10;
   int c0, c1, c2;
+
+  logger.trace("  Constructing BWT...");
 
   /* Construct the sorted order of type B suffixes by using
      the sorted order of type B* suffixes. */
@@ -1746,6 +1769,8 @@ public int
 transform(byte[] T, int[] SA, int n) {
   int m, pidx, i;
 
+  logger.trace("Running DivBWT (block size is {})", n);
+
   /* Check arguments. */
   assert(n > 0);
   if(n == 1) { SA[0] = T[0]; return 0; }
@@ -1766,6 +1791,7 @@ transform(byte[] T, int[] SA, int n) {
     for(i = 0; i < n; ++i) { SA[i] = T[0] + CHARACTER_BIAS; }
   }
 
+  logger.trace("DivBWT done (primary index is {})", pidx);
   return pidx;
 }
 }
