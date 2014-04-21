@@ -15,6 +15,8 @@
  */
 package org.lbzip2.impl;
 
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static org.lbzip2.impl.Constants.lg_table;
 import static org.lbzip2.impl.Constants.sqq_table;
 
@@ -113,6 +115,49 @@ final class Utils
             }
             P[b1] = t;
         }
+    }
+
+    /**
+     * Select median of five integers.
+     * <p>
+     * The implementation is based on the following sorting network:
+     * 
+     * <pre>
+     * >--(a)--*--(f)--*---(j)--*----------------------->
+     *         |       |        |
+     * >--(b)--*--(g)--+*--(k)--*--(n)--*--------------->
+     *                 ||               |
+     * >--(c)--*--(h)--*+--(l)--*--(o)--*--(q)--*--(s)-->
+     *         |        |       |               |
+     * >--(d)--*--(i)---+-------*--(p)--*--(r)--*------->
+     *                  |               |
+     * >--(e)-----------*--(m)----------*--------------->
+     * </pre>
+     * 
+     * @param a first integer to select median from
+     * @param b second integer to select median from
+     * @param c third integer to select median from
+     * @param d fourth integer to select median from
+     * @param e fifth integer to select median from
+     * @return the median value
+     */
+    static long med5( final long a, final long b, final long c, final long d, final long e )
+    {
+        final long f = max( a, b );
+        final long g = min( a, b );
+        final long h = max( c, d );
+        final long i = min( c, d );
+        final long j = max( f, h );
+        final long k = max( g, e );
+        final long l = min( f, h );
+        final long m = min( g, e );
+        final long n = min( j, k );
+        final long o = max( l, i );
+        final long p = min( l, i );
+        final long q = min( n, o );
+        final long r = max( p, m );
+        final long s = max( q, r );
+        return s;
     }
 
     private Utils()
