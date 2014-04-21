@@ -118,6 +118,33 @@ final class Utils
     }
 
     /**
+     * Select median of three integers.
+     * <p>
+     * The implementation is based on the following sorting network:
+     * 
+     * <pre>
+     * >--(a)--*--(d)----------*------->
+     *         |               |
+     * >--(b)--*--(e)--*--(f)--*--(g)-->
+     *                 |
+     * >--(c)----------*--------------->
+     * </pre>
+     * 
+     * @param a first integer to select median from
+     * @param b second integer to select median from
+     * @param c third integer to select median from
+     * @return the median value
+     */
+    static long med3( final long a, final long b, final long c )
+    {
+        final long d = max( a, b );
+        final long e = min( a, b );
+        final long f = max( e, c );
+        final long g = min( d, f );
+        return g;
+    }
+
+    /**
      * Select median of five integers.
      * <p>
      * The implementation is based on the following sorting network:

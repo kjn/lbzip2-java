@@ -20,6 +20,7 @@ import static org.lbzip2.impl.Utils.ilog2;
 import static org.lbzip2.impl.Utils.ilog2_16;
 import static org.lbzip2.impl.Utils.insertion_sort;
 import static org.lbzip2.impl.Utils.isqrt;
+import static org.lbzip2.impl.Utils.med3;
 import static org.lbzip2.impl.Utils.med5;
 
 import java.util.Arrays;
@@ -99,6 +100,34 @@ public class UtilsTest
 
             for ( int i = 0; i < n; i++ )
                 assertEquals( B[n - i - 1], A[i] );
+        }
+    }
+
+    @Test
+    public void testMedianOf3()
+    {
+        long[] A = new long[3];
+
+        for ( int v = 0; v < 8; v++ )
+        {
+            for ( int i = 0; i < 3; i++ )
+                A[i] = ( v >> i ) & 1;
+
+            long median = med3( A[0], A[1], A[2] );
+
+            Arrays.sort( A );
+            assertEquals( A[1], median );
+        }
+
+        for ( int nRep = 0; nRep < 1000; nRep++ )
+        {
+            for ( int i = 0; i < 3; i++ )
+                A[i] = r.nextLong();
+
+            long median = med3( A[0], A[1], A[2] );
+
+            Arrays.sort( A );
+            assertEquals( A[1], median );
         }
     }
 
