@@ -32,6 +32,11 @@ private static final boolean DEBUG = true;
 private static final int SS_INSERTIONSORT_THRESHOLD = 8;
 private static final int SS_BLOCKSIZE = 1024;
 private static final int ALPHABET_SIZE = 256;
+private static final int FIRST_CHAR = -128;
+private static final int LAST_CHAR = 127;
+private static final int CHARACTER_BIAS = 128;
+private static final int BUCKET_A_BIAS = CHARACTER_BIAS + ALPHABET_SIZE * ALPHABET_SIZE;
+private static final int BUCKET_B_BIAS = CHARACTER_BIAS + ALPHABET_SIZE * CHARACTER_BIAS;
 
 /* minstacksize = log(SS_BLOCKSIZE) / log(3) * 2 */
 private static final int SS_MISORT_STACKSIZE = 16;
@@ -64,52 +69,52 @@ STACK_PUSH5(int[] stack, int ssize, int a, int b, int c, int d, int e)
 private int
 BUCKET_A(int[] bucket, int c0)
 {
-  return bucket[c0 + ALPHABET_SIZE * ALPHABET_SIZE];
+  return bucket[c0 + BUCKET_A_BIAS];
 }
 private void
 BUCKET_A_SET(int[] bucket, int c0, int value)
 {
-  bucket[c0 + ALPHABET_SIZE * ALPHABET_SIZE] = value;
+  bucket[c0 + BUCKET_A_BIAS] = value;
 }
 private void
 BUCKET_A_INC(int[] bucket, int c0)
 {
-  ++bucket[c0 + ALPHABET_SIZE * ALPHABET_SIZE];
+  ++bucket[c0 + BUCKET_A_BIAS];
 }
 private int
 BUCKET_B(int[] bucket, int c0, int c1)
 {
-  return bucket[(c1 << 8) | c0];
+  return bucket[(c1 << 8) + c0 + BUCKET_B_BIAS];
 }
 private void
 BUCKET_B_SET(int[] bucket, int c0, int c1, int value)
 {
-  bucket[(c1 << 8) | c0] = value;
+  bucket[(c1 << 8) + c0 + BUCKET_B_BIAS] = value;
 }
 private void
 BUCKET_B_INC(int[] bucket, int c0, int c1)
 {
-  ++bucket[(c1 << 8) | c0];
+  ++bucket[(c1 << 8) + c0 + BUCKET_B_BIAS];
 }
 private int
 BUCKET_BSTAR(int[] bucket, int c0, int c1)
 {
-  return bucket[(c0 << 8) | c1];
+  return bucket[(c0 << 8) + c1 + BUCKET_B_BIAS];
 }
 private void
 BUCKET_BSTAR_SET(int[] bucket, int c0, int c1, int value)
 {
-  bucket[(c0 << 8) | c1] = value;
+  bucket[(c0 << 8) + c1 + BUCKET_B_BIAS] = value;
 }
 private void
 BUCKET_BSTAR_INC(int[] bucket, int c0, int c1)
 {
-  ++bucket[(c0 << 8) | c1];
+  ++bucket[(c0 << 8) + c1 + BUCKET_B_BIAS];
 }
 private int
 BUCKET_BSTAR_DEC(int[] bucket, int c0, int c1)
 {
-  return --bucket[(c0 << 8) | c1];
+  return --bucket[(c0 << 8) + c1 + BUCKET_B_BIAS];
 }
 /* for trsort.c */
 private int
@@ -1569,11 +1574,11 @@ note:
 */
 
   /* Calculate the index of start/end point of each bucket. */
-  for(c0 = 0, i = 0, j = 0; c0 < ALPHABET_SIZE; ++c0) {
+  for(c0 = FIRST_CHAR, i = 0, j = 0; c0 <= LAST_CHAR; ++c0) {
     t = i + BUCKET_A(bucket, c0);
     BUCKET_A_SET(bucket, c0, i + j); /* start point */
     i = t + BUCKET_B(bucket, c0, c0);
-    for(c1 = c0 + 1; c1 < ALPHABET_SIZE; ++c1) {
+    for(c1 = c0 + 1; c1 <= LAST_CHAR; ++c1) {
       j += BUCKET_BSTAR(bucket, c0, c1);
       BUCKET_BSTAR_SET(bucket, c0, c1, j); /* end point */
       i += BUCKET_B(bucket, c0, c1);
@@ -1591,8 +1596,8 @@ note:
 
   /* Sort the type B* substrings using sssort. */
   buf = m; bufsize = n - (2 * m);
-  for(c0 = ALPHABET_SIZE - 2, j = m; 0 < j; --c0) {
-    for(c1 = ALPHABET_SIZE - 1; c0 < c1; j = i, --c1) {
+  for(c0 = LAST_CHAR - 1, j = m; 0 < j; --c0) {
+    for(c1 = LAST_CHAR; c0 < c1; j = i, --c1) {
       i = BUCKET_BSTAR(bucket, c0, c1);
       if(1 < (j - i)) {
         sssort(T, SA, xpa, i, j,
@@ -1646,10 +1651,10 @@ note:
   }
 
   /* Calculate the index of start/end point of each bucket. */
-  BUCKET_B_SET(bucket, ALPHABET_SIZE - 1, ALPHABET_SIZE - 1, n); /* end point */
-  for(c0 = ALPHABET_SIZE - 2, k = m - 1; 0 <= c0; --c0) {
+  BUCKET_B_SET(bucket, LAST_CHAR, LAST_CHAR, n); /* end point */
+  for(c0 = LAST_CHAR - 1, k = m - 1; FIRST_CHAR <= c0; --c0) {
     i = BUCKET_A(bucket, c0 + 1) - 1;
-    for(c1 = ALPHABET_SIZE - 1; c0 < c1; --c1) {
+    for(c1 = LAST_CHAR; c0 < c1; --c1) {
       t = i - BUCKET_B(bucket, c0, c1);
       BUCKET_B_SET(bucket, c0, c1, i); /* end point */
 
@@ -1675,10 +1680,10 @@ construct_BWT(byte[] T, int[] SA,
 
   /* Construct the sorted order of type B suffixes by using
      the sorted order of type B* suffixes. */
-  for(c1 = ALPHABET_SIZE - 2; 0 <= c1; --c1) {
+  for(c1 = LAST_CHAR - 1; FIRST_CHAR <= c1; --c1) {
     /* Scan the suffix array from right to left. */
     for(i = BUCKET_BSTAR(bucket, c1, c1 + 1),
-        j = BUCKET_A(bucket, c1 + 1) - 1, k = Integer.MIN_VALUE, c2 = -1;
+        j = BUCKET_A(bucket, c1 + 1) - 1, k = Integer.MIN_VALUE, c2 = Integer.MIN_VALUE;
         i <= j;
         --j) {
       if(0 <= (s = SA[j])) {
@@ -1689,9 +1694,9 @@ construct_BWT(byte[] T, int[] SA,
         else { t = n - 1; orig = j; }
         assert(T[t] <= T[s]);
         c0 = T[t];
-        SA[j] = ~c0;
+        SA[j] = ~(c0 + CHARACTER_BIAS);
         if(c0 != c2) {
-          if(0 <= c2) { BUCKET_B_SET(bucket, c2, c1, k); }
+          if(FIRST_CHAR <= c2) { BUCKET_B_SET(bucket, c2, c1, k); }
           k = BUCKET_B(bucket, c2 = c0, c1);
         }
         assert(k < j);
@@ -1705,7 +1710,7 @@ construct_BWT(byte[] T, int[] SA,
 
   /* Construct the BWTed string by using
      the sorted order of type B suffixes. */
-  k = BUCKET_A(bucket, c2 = 0);
+  k = BUCKET_A(bucket, c2 = FIRST_CHAR);
   /* Scan the suffix array from left to right. */
   for(i = 0, j = n; i < j; ++i) {
     if(0 <= (s = SA[i])) {
@@ -1713,7 +1718,7 @@ construct_BWT(byte[] T, int[] SA,
       else { t = n - 1; orig = i; }
       assert(T[t] >= T[s]);
       c0 = T[t];
-      SA[i] = c0;
+      SA[i] = c0 + CHARACTER_BIAS;
       if(c0 != c2) {
         BUCKET_A_SET(bucket, c2, k);
         k = BUCKET_A(bucket, c2 = c0);
@@ -1721,7 +1726,7 @@ construct_BWT(byte[] T, int[] SA,
       if(t != 0) { c1 = T[t - 1]; }
       else { c1 = T[n - 1]; orig = k; }
       assert(i <= k);
-      SA[k++] = (c1 < c2) ? ~((int)c1) : t;
+      SA[k++] = (c1 < c2) ? ~(c1 + CHARACTER_BIAS) : t;
     } else {
       SA[i] = ~s;
     }
@@ -1749,13 +1754,16 @@ transform(byte[] T, int[] SA, int n) {
 
   int[] bucket = new int[ALPHABET_SIZE * ALPHABET_SIZE + ALPHABET_SIZE];
 
+  for (i = 0; i <= n; i++)
+    T[i] += CHARACTER_BIAS;
+
   /* Burrows-Wheeler Transform. */
   m = sort_typeBstar(T, SA, bucket, n);
   if(0 < m) {
     pidx = construct_BWT(T, SA, bucket, n);
   } else {
     pidx = 0;
-    for(i = 0; i < n; ++i) { SA[i] = T[0]; }
+    for(i = 0; i < n; ++i) { SA[i] = T[0] + CHARACTER_BIAS; }
   }
 
   return pidx;
