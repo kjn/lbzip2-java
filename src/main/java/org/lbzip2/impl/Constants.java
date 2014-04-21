@@ -148,6 +148,8 @@ class Constants
 
     static final int GROUP_SIZE = 50;
 
+    static final int CHARACTER_BIAS = 128;
+
     /**
      * Initialize CRC table.
      */

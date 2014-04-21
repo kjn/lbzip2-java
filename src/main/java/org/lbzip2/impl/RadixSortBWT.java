@@ -15,6 +15,7 @@
  */
 package org.lbzip2.impl;
 
+import static org.lbzip2.impl.Constants.CHARACTER_BIAS;
 import static org.lbzip2.impl.Unsigned.umin;
 
 /**
@@ -40,7 +41,7 @@ class RadixSortBWT
 
         for ( int i = 0; i < n; i++ )
         {
-            C[B[i] & 0xFF]++;
+            C[B[i] + CHARACTER_BIAS]++;
             P[i] = i;
         }
 
@@ -57,7 +58,7 @@ class RadixSortBWT
             {
                 int j = P[i];
                 int t = umin( j - d, j - d + n );
-                R[U[B[t] & 0xFF]++] = j;
+                R[U[B[t] + CHARACTER_BIAS]++] = j;
             }
 
             int[] T = P;
@@ -76,7 +77,7 @@ class RadixSortBWT
                 j = n;
             }
 
-            P[i] = B[j - 1] & 0xFF;
+            P[i] = B[j - 1] + CHARACTER_BIAS;
         }
 
         assert idx < n;

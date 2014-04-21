@@ -41,6 +41,8 @@
  */
 package org.lbzip2.impl;
 
+import static org.lbzip2.impl.Constants.CHARACTER_BIAS;
+
 import java.util.Arrays;
 
 import org.slf4j.Logger;
@@ -67,8 +69,6 @@ final class DivBWT
     private static final int FIRST_CHAR = -128;
 
     private static final int LAST_CHAR = 127;
-
-    private static final int CHARACTER_BIAS = 128;
 
     private static final int BUCKET_A_BIAS = CHARACTER_BIAS + ALPHABET_SIZE * ALPHABET_SIZE;
 
@@ -489,9 +489,6 @@ final class DivBWT
         T[n] = T[0];
 
         final int[] bucket = new int[ALPHABET_SIZE * ALPHABET_SIZE + ALPHABET_SIZE];
-
-        for ( i = 0; i <= n; i++ )
-            T[i] += CHARACTER_BIAS;
 
         /* Burrows-Wheeler Transform. */
         m = sort_typeBstar( T, SA, bucket, n );

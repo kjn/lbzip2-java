@@ -16,6 +16,7 @@
 package org.lbzip2.impl;
 
 import static org.junit.Assert.assertEquals;
+import static org.lbzip2.impl.Constants.CHARACTER_BIAS;
 
 import org.junit.Test;
 
@@ -34,6 +35,8 @@ public abstract class AbstractBWTTest
         byte[] B = new byte[] { 'M', 'I', 'S', 'S', 'I', 'S', 'S', 'I', 'P', 'P', 'I', -1 };
         int[] P = new int[11];
 
+        for ( int i = 0; i < 11; i++ )
+            B[i] += CHARACTER_BIAS;
         int idx = bwt.transform( B, P, 11 );
 
         assertEquals( 'P', P[0] );
@@ -71,7 +74,8 @@ public abstract class AbstractBWTTest
 
             int[] P = new int[f0.length];
             byte[] f = new byte[f0.length + 1];
-            System.arraycopy( f0, 0, f, 0, f0.length );
+            for ( int i = 0; i < f0.length; i++ )
+                f[i] = (byte) ( f0[i] + CHARACTER_BIAS );
             int idx = bwt.transform( f, P, f0.length );
             assertEquals( x0 + d, idx );
 

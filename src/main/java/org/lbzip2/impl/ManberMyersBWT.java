@@ -15,6 +15,8 @@
  */
 package org.lbzip2.impl;
 
+import static org.lbzip2.impl.Constants.CHARACTER_BIAS;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,11 +50,11 @@ class ManberMyersBWT
         for ( i = 0; i < 256; i++ )
             C[i] = 0;
         for ( i = 0; i < n; i++ )
-            C[D[i] & 0xFF]++;
+            C[D[i] + CHARACTER_BIAS]++;
         for ( i = 1; i < 256; i++ )
             C[i] += C[i - 1];
         for ( i = 0; i < n; i++ )
-            P[--C[D[i] & 0xFF]] = i;
+            P[--C[D[i] + CHARACTER_BIAS]] = i;
 
         for ( i = 0; i < n; i++ )
             B[i] = false;
@@ -112,7 +114,7 @@ class ManberMyersBWT
         j = R[0];
         P[j] = n;
         for ( i = 0; i < n; i++ )
-            P[i] = D[P[i] - 1] & 0xFF;
+            P[i] = D[P[i] - 1] + CHARACTER_BIAS;
 
         return j;
     }

@@ -15,6 +15,7 @@
  */
 package org.lbzip2.impl;
 
+import static org.lbzip2.impl.Constants.CHARACTER_BIAS;
 import static org.lbzip2.impl.Constants.MAX_RUN_LENGTH;
 import static org.lbzip2.impl.Constants.crc_table;
 
@@ -107,7 +108,7 @@ class Collector
                              */
                             if ( ( inbuf[p] & 0xFF ) != ch )
                             {
-                                block[q++] = (byte) ( rle_state - 4 );
+                                block[q++] = (byte) ( rle_state - 4 + CHARACTER_BIAS );
                                 inuse[rle_state - 4] = true;
                                 break finish_run;
                             }
@@ -126,7 +127,7 @@ class Collector
                              */
                             if ( rle_state == MAX_RUN_LENGTH )
                             {
-                                block[q++] = (byte) ( MAX_RUN_LENGTH - 4 );
+                                block[q++] = (byte) ( MAX_RUN_LENGTH - 4 + CHARACTER_BIAS );
                                 inuse[MAX_RUN_LENGTH - 4] = true;
                                 break finish_run;
                             }
@@ -146,7 +147,7 @@ class Collector
                     p++;
                     crc = ( crc << 8 ) ^ crc_table[( crc >>> 24 ) ^ ch];
                     rle_state++;
-                    block[q++] = (byte) ch;
+                    block[q++] = (byte) ( ch + CHARACTER_BIAS );
 
                     /* We haven't finished the run yet, so keep going. */
                 }
@@ -174,7 +175,7 @@ class Collector
                     {
                         /* === STATE 1 === */
                         inuse[ch] = true;
-                        block[q++] = (byte) ch;
+                        block[q++] = (byte) ( ch + CHARACTER_BIAS );
                         if ( q > qMax )
                         {
                             rle_state = -1;
@@ -194,7 +195,7 @@ class Collector
                     }
 
                     /* === STATE 2 === */
-                    block[q++] = (byte) ch;
+                    block[q++] = (byte) ( ch + CHARACTER_BIAS );
                     if ( q > qMax )
                     {
                         rle_state = -1;
@@ -212,7 +213,7 @@ class Collector
                         continue;
 
                     /* === STATE 3 === */
-                    block[q++] = (byte) ch;
+                    block[q++] = (byte) ( ch + CHARACTER_BIAS );
                     if ( q >= qMax && ( q > qMax || ( p < pLim && ( inbuf[p] & 0xFF ) == last ) ) )
                     {
                         rle_state = -1;
@@ -231,7 +232,7 @@ class Collector
 
                     /* === STATE 4+ === */
                     assert q < qMax;
-                    block[q++] = (byte) ch;
+                    block[q++] = (byte) ( ch + CHARACTER_BIAS );
 
                     /*
                      * While the run is shorter than MAX_RUN_LENGTH characters, keep trying to append more characters to
@@ -257,7 +258,7 @@ class Collector
                          */
                         if ( ch != last )
                         {
-                            block[q++] = (byte) ( run - 4 );
+                            block[q++] = (byte) ( run - 4 + CHARACTER_BIAS );
                             inuse[run - 4] = true;
                             if ( q <= qMax )
                                 continue state1;
@@ -275,7 +276,7 @@ class Collector
                     /*
                      * The run has reached maximal length, so it must be ended prematurely.
                      */
-                    block[q++] = (byte) ( MAX_RUN_LENGTH - 4 );
+                    block[q++] = (byte) ( MAX_RUN_LENGTH - 4 + CHARACTER_BIAS );
                     inuse[MAX_RUN_LENGTH - 4] = true;
                     break;
                 }
@@ -294,7 +295,7 @@ class Collector
         if ( rle_state >= 4 )
         {
             assert ( nblock < max_block_size );
-            block[nblock++] = (byte) ( rle_state - 4 );
+            block[nblock++] = (byte) ( rle_state - 4 + CHARACTER_BIAS );
             inuse[rle_state - 4] = true;
         }
         assert ( nblock > 0 );

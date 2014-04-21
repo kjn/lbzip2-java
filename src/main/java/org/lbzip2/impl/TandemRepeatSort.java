@@ -56,8 +56,6 @@ final class TandemRepeatSort
     /* for trsort.c */
     private static final int TR_INSERTIONSORT_THRESHOLD = 8;
 
-    private static final int TR_STACKSIZE = 64;
-
     private final int STACK_PUSH5( final int[] stack, final int ssize, final int a, final int b, final int c,
                                    final int d, final int e )
     {
@@ -512,6 +510,7 @@ final class TandemRepeatSort
 
     private final void tr_introsort( final int[] SA, int depth, final int num_bstar, int first, int last )
     {
+        final int TR_STACKSIZE = 64;
         final int[] stack = new int[5 * TR_STACKSIZE];
         int a, b, c;
         int t;
