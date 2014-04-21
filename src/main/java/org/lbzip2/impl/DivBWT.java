@@ -25,7 +25,7 @@ import static java.lang.Math.*;
 
 import java.util.Arrays;
 
-class DivBWT {
+class DivBWT implements BWT {
 private static final boolean DEBUG = true;
 
 /*- Settings -*/
@@ -1737,8 +1737,8 @@ construct_BWT(byte[] T, int[] SA,
 
 /*- Function -*/
 
-int
-divbwt(byte[] T, int[] SA, int[] bucket, int n) {
+public int
+transform(byte[] T, int[] SA, int n) {
   int m, pidx, i;
 
   /* Check arguments. */
@@ -1746,6 +1746,8 @@ divbwt(byte[] T, int[] SA, int[] bucket, int n) {
   if(n == 1) { SA[0] = T[0]; return 0; }
 
   T[n] = T[0];
+
+  int[] bucket = new int[ALPHABET_SIZE * ALPHABET_SIZE + ALPHABET_SIZE];
 
   /* Burrows-Wheeler Transform. */
   m = sort_typeBstar(T, SA, bucket, n);
