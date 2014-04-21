@@ -43,6 +43,8 @@ package org.lbzip2.impl;
 
 import static org.lbzip2.impl.Unsigned.umin;
 import static org.lbzip2.impl.Utils.ilog2;
+import static org.lbzip2.impl.Utils.med3;
+import static org.lbzip2.impl.Utils.med5;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -176,106 +178,42 @@ final class TandemRepeatSort
         }
     }
 
-    /*---------------------------------------------------------------------------*/
-
-    /* Returns the median of three elements. */
-    private final int tr_median3( final int[] SA, final int depth, final int num_bstar, int v1, int v2, final int v3 )
+    private final long tr_pivot_key( final int[] SA, final int depth, final int num_bstar, final int p )
     {
-        int t;
-        if ( TR_GETC( SA, depth, num_bstar, SA[v1] ) > TR_GETC( SA, depth, num_bstar, SA[v2] ) )
-        {
-            t = v1;
-            v1 = v2;
-            v2 = t;
-        }
-        if ( TR_GETC( SA, depth, num_bstar, SA[v2] ) > TR_GETC( SA, depth, num_bstar, SA[v3] ) )
-        {
-            if ( TR_GETC( SA, depth, num_bstar, SA[v1] ) > TR_GETC( SA, depth, num_bstar, SA[v3] ) )
-            {
-                return v1;
-            }
-            else
-            {
-                return v3;
-            }
-        }
-        return v2;
-    }
-
-    /* Returns the median of five elements. */
-    private final int tr_median5( final int[] SA, final int depth, final int num_bstar, int v1, int v2, int v3, int v4,
-                                  int v5 )
-    {
-        int t;
-        if ( TR_GETC( SA, depth, num_bstar, SA[v2] ) > TR_GETC( SA, depth, num_bstar, SA[v3] ) )
-        {
-            t = v2;
-            v2 = v3;
-            v3 = t;
-        }
-        if ( TR_GETC( SA, depth, num_bstar, SA[v4] ) > TR_GETC( SA, depth, num_bstar, SA[v5] ) )
-        {
-            t = v4;
-            v4 = v5;
-            v5 = t;
-        }
-        if ( TR_GETC( SA, depth, num_bstar, SA[v2] ) > TR_GETC( SA, depth, num_bstar, SA[v4] ) )
-        {
-            t = v2;
-            v2 = v4;
-            v4 = t;
-            t = v3;
-            v3 = v5;
-            v5 = t;
-        }
-        if ( TR_GETC( SA, depth, num_bstar, SA[v1] ) > TR_GETC( SA, depth, num_bstar, SA[v3] ) )
-        {
-            t = v1;
-            v1 = v3;
-            v3 = t;
-        }
-        if ( TR_GETC( SA, depth, num_bstar, SA[v1] ) > TR_GETC( SA, depth, num_bstar, SA[v4] ) )
-        {
-            t = v1;
-            v1 = v4;
-            v4 = t;
-            t = v3;
-            v3 = v5;
-            v5 = t;
-        }
-        if ( TR_GETC( SA, depth, num_bstar, SA[v3] ) > TR_GETC( SA, depth, num_bstar, SA[v4] ) )
-        {
-            return v4;
-        }
-        return v3;
+        return ( (long) TR_GETC( SA, depth, num_bstar, SA[p] ) << 32 ) + p;
     }
 
     /* Returns the pivot element. */
-    private final int tr_pivot( final int[] SA, final int depth, final int num_bstar, int first, int last )
+    private final int tr_pivot( final int[] SA, final int depth, final int num_bstar, final int first, final int last )
     {
-        int middle;
-        int t;
+        int t = ( last - first ) >> 1;
+        final int middle = first + t;
 
-        t = last - first;
-        middle = first + t / 2;
+        final long v1 = tr_pivot_key( SA, depth, num_bstar, first );
+        final long v5 = tr_pivot_key( SA, depth, num_bstar, middle );
+        final long v9 = tr_pivot_key( SA, depth, num_bstar, last - 1 );
 
-        if ( t <= 512 )
+        if ( t <= 16 )
         {
-            if ( t <= 32 )
-            {
-                return tr_median3( SA, depth, num_bstar, first, middle, last - 1 );
-            }
-            else
-            {
-                t >>= 2;
-                return tr_median5( SA, depth, num_bstar, first, first + t, middle, last - 1 - t, last - 1 );
-            }
+            return (int) med3( v1, v5, v9 );
         }
-        t >>= 3;
-        first = tr_median3( SA, depth, num_bstar, first, first + t, first + ( t << 1 ) );
-        middle = tr_median3( SA, depth, num_bstar, middle - t, middle, middle + t );
-        last = tr_median3( SA, depth, num_bstar, last - 1 - ( t << 1 ), last - 1 - t, last - 1 );
-        return tr_median3( SA, depth, num_bstar, first, middle, last );
+
+        t >>= 1;
+        final long v3 = tr_pivot_key( SA, depth, num_bstar, first + t );
+        final long v7 = tr_pivot_key( SA, depth, num_bstar, last - t );
+
+        if ( t <= 128 )
+        {
+            return (int) med5( v1, v3, v5, v7, v9 );
+        }
+
+        t >>= 1;
+        final long v2 = tr_pivot_key( SA, depth, num_bstar, first + t );
+        final long v4 = tr_pivot_key( SA, depth, num_bstar, middle - t );
+        final long v6 = tr_pivot_key( SA, depth, num_bstar, middle + t );
+        final long v8 = tr_pivot_key( SA, depth, num_bstar, last - t );
+
+        return (int) med3( med3( v1, v2, v3 ), med3( v4, v5, v6 ), med3( v7, v8, v9 ) );
     }
 
     /*---------------------------------------------------------------------------*/
