@@ -83,7 +83,7 @@ class Collector
                 finish_run: for ( ;; )
                 {
                     /* There is an unfinished run from the previous call, try to finish it. */
-                    if ( q >= qMax && ( q > qMax || ( rle_state == 3 && p < pLim && inbuf[p] == ch ) ) )
+                    if ( q >= qMax && ( q > qMax || ( rle_state == 3 && p < pLim && (inbuf[p] & 0xFF) == ch ) ) )
                     {
                         rle_state = -1;
                         break main_loop;
@@ -105,7 +105,7 @@ class Collector
                             /*
                              * Lookahead the next character. Terminate current run if lookahead character doesn't match.
                              */
-                            if ( inbuf[p] != ch )
+                            if ( (inbuf[p] & 0xFF) != ch )
                             {
                                 block[q++] = (byte) ( rle_state - 4 );
                                 inuse[rle_state - 4] = true;
@@ -139,7 +139,7 @@ class Collector
                     /*
                      * Lookahead the next character. Terminate current run if lookahead character does not match.
                      */
-                    if ( inbuf[p] != ch )
+                    if ( (inbuf[p] & 0xFF) != ch )
                         break finish_run;
 
                     /* Append the character to the run. */
@@ -213,7 +213,7 @@ class Collector
 
                     /* === STATE 3 === */
                     block[q++] = (byte) ch;
-                    if ( q >= qMax && ( q > qMax || ( p < pLim && inbuf[p] == last ) ) )
+                    if ( q >= qMax && ( q > qMax || ( p < pLim && (inbuf[p] & 0xFF) == last ) ) )
                     {
                         rle_state = -1;
                         break main_loop;
