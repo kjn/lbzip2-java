@@ -992,8 +992,9 @@ final class TandemRepeatSort
     /*- Function -*/
 
     /* Tandem repeat sort */
-    final void trsort( final int[] SA, final int n, int depth )
+    final void trsort( final int[] SA, final int n )
     {
+        int depth = 1;
         int first, last, a;
         int t, skip, unsorted;
 

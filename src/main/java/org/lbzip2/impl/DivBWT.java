@@ -294,7 +294,7 @@ final class DivBWT
         logger.trace( "  Constructing ISA..." );
 
         /* Construct the inverse suffix array of type B* suffixes using trsort. */
-        TR.trsort( SA, m, 1 );
+        TR.trsort( SA, m );
 
         /* Set the sorted order of type B* suffixes. */
         i = n - 1;
