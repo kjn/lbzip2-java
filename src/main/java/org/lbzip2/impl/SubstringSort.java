@@ -52,7 +52,7 @@ import static org.lbzip2.impl.Utils.med5;
  * 
  * @author Mikolaj Izdebski
  */
-public final class SubstringSort
+final class SubstringSort
 {
     /**
      * Threshold for using insertion sort instead of quicksort. Substring sets not larger than this number will always
