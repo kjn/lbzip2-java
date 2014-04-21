@@ -41,6 +41,7 @@
  */
 package org.lbzip2.impl;
 
+import static org.lbzip2.impl.Unsigned.umin;
 import static org.lbzip2.impl.Utils.ilog2;
 
 import org.slf4j.Logger;
@@ -70,7 +71,8 @@ final class TandemRepeatSort
     /* for trsort.c */
     private final int TR_GETC( final int[] SA, final int depth, final int num_bstar, final int p )
     {
-        return ( p < ( num_bstar - depth ) ) ? SA[num_bstar + p + depth] : SA[num_bstar + ( p + depth ) % num_bstar];
+        final int index = p + depth;
+        return SA[umin( index, index - num_bstar ) + num_bstar];
     }
 
     /*---- trsort ----*/
