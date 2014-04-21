@@ -16,11 +16,15 @@
 package org.lbzip2.impl;
 
 import static org.junit.Assert.assertEquals;
+import static org.lbzip2.impl.Utils.ilog2;
+import static org.lbzip2.impl.Utils.ilog2_16;
 import static org.lbzip2.impl.Utils.insertion_sort;
+import static org.lbzip2.impl.Utils.isqrt;
 
 import java.util.Arrays;
 import java.util.Random;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 /**
@@ -29,6 +33,52 @@ import org.junit.Test;
 public class UtilsTest
 {
     private final Random r = new Random( 7541 );
+
+    @Test
+    public void testIntegerLog2()
+    {
+        for ( int x = 1; x <= 2 * 1000 * 1000; x++ )
+        {
+            double expected = Math.floor( Math.log( x ) / Math.log( 2 ) );
+            int actual = ilog2( x );
+
+            Assert.assertEquals( "For x=" + x, expected, actual, 0.0000001 );
+        }
+    }
+
+    @Test
+    public void testIntegerLog2_16()
+    {
+        for ( int x = 1; x <= 65535; x++ )
+        {
+            double expected = Math.floor( Math.log( x ) / Math.log( 2 ) );
+            int actual = ilog2_16( x );
+
+            Assert.assertEquals( "For x=" + x, expected, actual, 0.0000001 );
+        }
+    }
+
+    @Test
+    public void testIntegerSqrt()
+    {
+        for ( int x = 10; x <= 35000; x++ )
+        {
+            double expected = Math.floor( Math.sqrt( x ) );
+            int actual = isqrt( x, 32768 );
+
+            Assert.assertEquals( "For x=" + x, expected, actual, 0.0000001 );
+        }
+
+        int n = 17;
+
+        for ( int x = 10; x <= 1000; x++ )
+        {
+            double expected = x >= n * n ? n : Math.floor( Math.sqrt( x ) );
+            int actual = isqrt( x, n );
+
+            Assert.assertEquals( "For x=" + x, expected, actual, 0.0000001 );
+        }
+    }
 
     @Test
     public void testInsertionSort()

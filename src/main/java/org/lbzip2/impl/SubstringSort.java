@@ -42,21 +42,27 @@
 package org.lbzip2.impl;
 
 import static java.lang.Math.min;
-import static org.lbzip2.impl.Constants.lg_table;
+import static org.lbzip2.impl.Utils.ilog2_16;
+import static org.lbzip2.impl.Utils.isqrt;
 
 /**
+ * A class implementing substring sort used in construction of Burrows–Wheeler transform.
+ * 
  * @author Mikolaj Izdebski
  */
-final class SubstringSort
+public final class SubstringSort
 {
+    /**
+     * Threshold for using insertion sort instead of quicksort. Substring sets not larger than this number will always
+     * be sorted using insertion sort algorithm.
+     */
     private static final int SS_INSERTIONSORT_THRESHOLD = 8;
 
+    /**
+     * Maximal length of each substring. Suffixes which have common prefix of {@code SS_BLOCKSIZE} characters (or more)
+     * are considered as equal by this algorithm, their ordering is established using tandem repeat sort.
+     */
     private static final int SS_BLOCKSIZE = 1024;
-
-    /* minstacksize = log(SS_BLOCKSIZE) / log(3) * 2 */
-    private static final int SS_MISORT_STACKSIZE = 16;
-
-    private static final int SS_SMERGE_STACKSIZE = 32;
 
     /*- Macros -*/
     private final int STACK_PUSH( final int[] stack, final int ssize, final int a, final int b, final int c, final int d )
@@ -66,63 +72,6 @@ final class SubstringSort
         stack[ssize + 2] = c;
         stack[ssize + 3] = d;
         return ssize + 4;
-    }
-
-    /*---- sssort ----*/
-
-    /*- Private Functions -*/
-
-    private final int ss_ilg( final int n )
-    {
-        return ( n & 0xff00 ) != 0 ? 8 + lg_table[( n >> 8 ) & 0xff] : 0 + lg_table[( n >> 0 ) & 0xff];
-    }
-
-    private final int[] sqq_table = new int[] { 0, 16, 22, 27, 32, 35, 39, 42, 45, 48, 50, 53, 55, 57, 59, 61, 64, 65,
-        67, 69, 71, 73, 75, 76, 78, 80, 81, 83, 84, 86, 87, 89, 90, 91, 93, 94, 96, 97, 98, 99, 101, 102, 103, 104,
-        106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 128, 128,
-        129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 144, 145, 146, 147, 148, 149,
-        150, 150, 151, 152, 153, 154, 155, 155, 156, 157, 158, 159, 160, 160, 161, 162, 163, 163, 164, 165, 166, 167,
-        167, 168, 169, 170, 170, 171, 172, 173, 173, 174, 175, 176, 176, 177, 178, 178, 179, 180, 181, 181, 182, 183,
-        183, 184, 185, 185, 186, 187, 187, 188, 189, 189, 190, 191, 192, 192, 193, 193, 194, 195, 195, 196, 197, 197,
-        198, 199, 199, 200, 201, 201, 202, 203, 203, 204, 204, 205, 206, 206, 207, 208, 208, 209, 209, 210, 211, 211,
-        212, 212, 213, 214, 214, 215, 215, 216, 217, 217, 218, 218, 219, 219, 220, 221, 221, 222, 222, 223, 224, 224,
-        225, 225, 226, 226, 227, 227, 228, 229, 229, 230, 230, 231, 231, 232, 232, 233, 234, 234, 235, 235, 236, 236,
-        237, 237, 238, 238, 239, 240, 240, 241, 241, 242, 242, 243, 243, 244, 244, 245, 245, 246, 246, 247, 247, 248,
-        248, 249, 249, 250, 250, 251, 251, 252, 252, 253, 253, 254, 254, 255 };
-
-    private final int ss_isqrt( final int x )
-    {
-        int y, e;
-
-        if ( x >= ( SS_BLOCKSIZE * SS_BLOCKSIZE ) )
-        {
-            return SS_BLOCKSIZE;
-        }
-        e =
-            ( x & 0xffff0000 ) != 0 ? ( ( x & 0xff000000 ) != 0 ? 24 + lg_table[( x >> 24 ) & 0xff]
-                            : 16 + lg_table[( x >> 16 ) & 0xff] )
-                            : ( ( x & 0x0000ff00 ) != 0 ? 8 + lg_table[( x >> 8 ) & 0xff]
-                                            : 0 + lg_table[( x >> 0 ) & 0xff] );
-
-        if ( e >= 16 )
-        {
-            y = sqq_table[x >> ( ( e - 6 ) - ( e & 1 ) )] << ( ( e >> 1 ) - 7 );
-            if ( e >= 24 )
-            {
-                y = ( y + 1 + x / y ) >> 1;
-            }
-            y = ( y + 1 + x / y ) >> 1;
-        }
-        else if ( e >= 8 )
-        {
-            y = ( sqq_table[x >> ( ( e - 6 ) - ( e & 1 ) )] >> ( 7 - ( e >> 1 ) ) ) + 1;
-        }
-        else
-        {
-            return sqq_table[x] >> 4;
-        }
-
-        return ( x < ( y * y ) ) ? y - 1 : y;
     }
 
     /*---------------------------------------------------------------------------*/
@@ -401,6 +350,8 @@ final class SubstringSort
     /* Multikey introsort for medium size groups. */
     private final void ss_mintrosort( final byte[] T, final int[] SA, final int xpa, int first, int last, int depth )
     {
+        /* minstacksize = log(SS_BLOCKSIZE) / log(3) * 2 */
+        final int SS_MISORT_STACKSIZE = 16;
         final int[] stack = new int[4 * SS_MISORT_STACKSIZE];
         int a, b, c, d, e, f;
         int s, t;
@@ -408,7 +359,7 @@ final class SubstringSort
         int limit;
         int v, x = 0;
 
-        for ( ssize = 0, limit = ss_ilg( last - first );; )
+        for ( ssize = 0, limit = ilog2_16( last - first );; )
         {
 
             if ( ( last - first ) <= SS_INSERTIONSORT_THRESHOLD )
@@ -457,7 +408,7 @@ final class SubstringSort
                         ssize = STACK_PUSH( stack, ssize, a, last, depth, -1 );
                         last = a;
                         depth += 1;
-                        limit = ss_ilg( a - first );
+                        limit = ilog2_16( a - first );
                     }
                     else
                     {
@@ -469,7 +420,7 @@ final class SubstringSort
                 {
                     if ( 1 < ( last - a ) )
                     {
-                        ssize = STACK_PUSH( stack, ssize, first, a, depth + 1, ss_ilg( a - first ) );
+                        ssize = STACK_PUSH( stack, ssize, first, a, depth + 1, ilog2_16( a - first ) );
                         first = a;
                         limit = -1;
                     }
@@ -477,7 +428,7 @@ final class SubstringSort
                     {
                         last = a;
                         depth += 1;
-                        limit = ss_ilg( a - first );
+                        limit = ilog2_16( a - first );
                     }
                 }
                 continue;
@@ -583,14 +534,14 @@ final class SubstringSort
                 {
                     if ( ( last - c ) <= ( c - b ) )
                     {
-                        ssize = STACK_PUSH( stack, ssize, b, c, depth + 1, ss_ilg( c - b ) );
+                        ssize = STACK_PUSH( stack, ssize, b, c, depth + 1, ilog2_16( c - b ) );
                         ssize = STACK_PUSH( stack, ssize, c, last, depth, limit );
                         last = a;
                     }
                     else if ( ( a - first ) <= ( c - b ) )
                     {
                         ssize = STACK_PUSH( stack, ssize, c, last, depth, limit );
-                        ssize = STACK_PUSH( stack, ssize, b, c, depth + 1, ss_ilg( c - b ) );
+                        ssize = STACK_PUSH( stack, ssize, b, c, depth + 1, ilog2_16( c - b ) );
                         last = a;
                     }
                     else
@@ -600,21 +551,21 @@ final class SubstringSort
                         first = b;
                         last = c;
                         depth += 1;
-                        limit = ss_ilg( c - b );
+                        limit = ilog2_16( c - b );
                     }
                 }
                 else
                 {
                     if ( ( a - first ) <= ( c - b ) )
                     {
-                        ssize = STACK_PUSH( stack, ssize, b, c, depth + 1, ss_ilg( c - b ) );
+                        ssize = STACK_PUSH( stack, ssize, b, c, depth + 1, ilog2_16( c - b ) );
                         ssize = STACK_PUSH( stack, ssize, first, a, depth, limit );
                         first = c;
                     }
                     else if ( ( last - c ) <= ( c - b ) )
                     {
                         ssize = STACK_PUSH( stack, ssize, first, a, depth, limit );
-                        ssize = STACK_PUSH( stack, ssize, b, c, depth + 1, ss_ilg( c - b ) );
+                        ssize = STACK_PUSH( stack, ssize, b, c, depth + 1, ilog2_16( c - b ) );
                         first = c;
                     }
                     else
@@ -624,7 +575,7 @@ final class SubstringSort
                         first = b;
                         last = c;
                         depth += 1;
-                        limit = ss_ilg( c - b );
+                        limit = ilog2_16( c - b );
                     }
                 }
             }
@@ -634,7 +585,7 @@ final class SubstringSort
                 if ( T[SA[xpa + SA[first]] - 1 + depth] < v )
                 {
                     first = ss_partition( SA, xpa, first, last, depth );
-                    limit = ss_ilg( last - first );
+                    limit = ilog2_16( last - first );
                 }
                 depth += 1;
             }
@@ -1055,6 +1006,7 @@ final class SubstringSort
     private final void ss_swapmerge( final byte[] T, final int[] SA, final int xpa, int first, int middle, int last,
                                      final int buf, final int bufsize, final int depth )
     {
+        final int SS_SMERGE_STACKSIZE = 32;
         final int[] stack = new int[4 * SS_SMERGE_STACKSIZE];
         int l, r, lm, rm;
         int m, len, half;
@@ -1196,7 +1148,7 @@ final class SubstringSort
         }
 
         if ( ( bufsize < SS_BLOCKSIZE ) && ( bufsize < ( last - first ) )
-            && ( bufsize < ( limit = ss_isqrt( last - first ) ) ) )
+            && ( bufsize < ( limit = isqrt( last - first, SS_BLOCKSIZE ) ) ) )
         {
             if ( SS_BLOCKSIZE < limit )
             {

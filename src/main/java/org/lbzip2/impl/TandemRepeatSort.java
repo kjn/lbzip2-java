@@ -41,7 +41,7 @@
  */
 package org.lbzip2.impl;
 
-import static org.lbzip2.impl.Constants.lg_table;
+import static org.lbzip2.impl.Utils.ilog2;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,13 +78,6 @@ final class TandemRepeatSort
     /*---- trsort ----*/
 
     /*- Private Functions -*/
-
-    private final int tr_ilg( final int n )
-    {
-        return ( n & 0xffff0000 ) != 0 ? ( ( n & 0xff000000 ) != 0 ? 24 + lg_table[( n >> 24 ) & 0xff]
-                        : 16 + lg_table[( n >> 16 ) & 0xff] )
-                        : ( ( n & 0x0000ff00 ) != 0 ? 8 + lg_table[( n >> 8 ) & 0xff] : 0 + lg_table[( n >> 0 ) & 0xff] );
-    }
 
     /*---------------------------------------------------------------------------*/
 
@@ -528,7 +521,7 @@ final class TandemRepeatSort
         int ssize, trlink = -1;
         long range;
 
-        for ( ssize = 0, limit = tr_ilg( last - first );; )
+        for ( ssize = 0, limit = ilog2( last - first );; )
         {
             assert ( ( depth < num_bstar ) || ( limit == -3 ) );
 
@@ -568,14 +561,14 @@ final class TandemRepeatSort
                     {
                         if ( 1 < ( a - first ) )
                         {
-                            ssize = STACK_PUSH5( stack, ssize, depth, b, last, tr_ilg( last - b ), trlink );
+                            ssize = STACK_PUSH5( stack, ssize, depth, b, last, ilog2( last - b ), trlink );
                             last = a;
-                            limit = tr_ilg( a - first );
+                            limit = ilog2( a - first );
                         }
                         else if ( 1 < ( last - b ) )
                         {
                             first = b;
-                            limit = tr_ilg( last - b );
+                            limit = ilog2( last - b );
                         }
                         else
                         {
@@ -594,14 +587,14 @@ final class TandemRepeatSort
                     {
                         if ( 1 < ( last - b ) )
                         {
-                            ssize = STACK_PUSH5( stack, ssize, depth, first, a, tr_ilg( a - first ), trlink );
+                            ssize = STACK_PUSH5( stack, ssize, depth, first, a, ilog2( a - first ), trlink );
                             first = b;
-                            limit = tr_ilg( last - b );
+                            limit = ilog2( last - b );
                         }
                         else if ( 1 < ( a - first ) )
                         {
                             last = a;
-                            limit = tr_ilg( a - first );
+                            limit = ilog2( a - first );
                         }
                         else
                         {
@@ -672,7 +665,7 @@ final class TandemRepeatSort
                         while ( SA[++a] < 0 );
                         next =
                             ( incr < ( num_bstar - depth ) ) ? ( ( SA[num_bstar + SA[a]] != TR_GETC( SA, depth,
-                                                                                                     num_bstar, SA[a] ) ) ? tr_ilg( a
+                                                                                                     num_bstar, SA[a] ) ) ? ilog2( a
                                 - first + 1 )
                                             : -1 )
                                             : -3;
@@ -786,8 +779,7 @@ final class TandemRepeatSort
             b = (int) range;
             if ( ( last - first ) != ( b - a ) )
             {
-                next =
-                    ( incr < ( num_bstar - depth ) ) ? ( ( SA[num_bstar + SA[a]] != v ) ? tr_ilg( b - a ) : -1 ) : -3;
+                next = ( incr < ( num_bstar - depth ) ) ? ( ( SA[num_bstar + SA[a]] != v ) ? ilog2( b - a ) : -1 ) : -3;
 
                 /* update ranks */
                 for ( c = first, v = a - 1; c < a; ++c )
@@ -1008,7 +1000,7 @@ final class TandemRepeatSort
         {
             return;
         }
-        trbudget_init( tr_ilg( n ) * 2 / 3, n );
+        trbudget_init( ilog2( n ) * 2 / 3, n );
         for ( ;; depth += depth )
         {
             logger.trace( "    Tandem repeat sort at depth {}", depth );
