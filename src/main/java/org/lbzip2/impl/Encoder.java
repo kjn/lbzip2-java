@@ -58,7 +58,7 @@ class Encoder
 
     private final EntropyCoder ec;
 
-    private final BWT bwt = new ManberMyersBWT();
+    private final BWT bwt = new DivBWT();
 
     public Encoder( Collector col, EntropyCoder ec )
     {
