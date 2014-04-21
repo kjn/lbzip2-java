@@ -104,7 +104,35 @@ public class UtilsTest
     }
 
     @Test
-    public void testMedianOf3()
+    public void testMedianOf3_int()
+    {
+        int[] A = new int[3];
+
+        for ( int v = 0; v < 8; v++ )
+        {
+            for ( int i = 0; i < 3; i++ )
+                A[i] = ( v >> i ) & 1;
+
+            int median = med3( A[0], A[1], A[2] );
+
+            Arrays.sort( A );
+            assertEquals( A[1], median );
+        }
+
+        for ( int nRep = 0; nRep < 1000; nRep++ )
+        {
+            for ( int i = 0; i < 3; i++ )
+                A[i] = r.nextInt();
+
+            int median = med3( A[0], A[1], A[2] );
+
+            Arrays.sort( A );
+            assertEquals( A[1], median );
+        }
+    }
+
+    @Test
+    public void testMedianOf3_long()
     {
         long[] A = new long[3];
 
@@ -132,7 +160,35 @@ public class UtilsTest
     }
 
     @Test
-    public void testMedianOf5()
+    public void testMedianOf5_int()
+    {
+        int[] A = new int[5];
+
+        for ( int v = 0; v < 32; v++ )
+        {
+            for ( int i = 0; i < 5; i++ )
+                A[i] = ( v >> i ) & 1;
+
+            int median = med5( A[0], A[1], A[2], A[3], A[4] );
+
+            Arrays.sort( A );
+            assertEquals( A[2], median );
+        }
+
+        for ( int nRep = 0; nRep < 1000; nRep++ )
+        {
+            for ( int i = 0; i < 5; i++ )
+                A[i] = r.nextInt();
+
+            int median = med5( A[0], A[1], A[2], A[3], A[4] );
+
+            Arrays.sort( A );
+            assertEquals( A[2], median );
+        }
+    }
+
+    @Test
+    public void testMedianOf5_long()
     {
         long[] A = new long[5];
 

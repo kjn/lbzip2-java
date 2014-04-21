@@ -135,6 +135,33 @@ final class Utils
      * @param c third integer to select median from
      * @return the median value
      */
+    static int med3( final int a, final int b, final int c )
+    {
+        final int d = max( a, b );
+        final int e = min( a, b );
+        final int f = max( e, c );
+        final int g = min( d, f );
+        return g;
+    }
+
+    /**
+     * Select median of three integers.
+     * <p>
+     * The implementation is based on the following sorting network:
+     * 
+     * <pre>
+     * >--(a)--*--(d)----------*------->
+     *         |               |
+     * >--(b)--*--(e)--*--(f)--*--(g)-->
+     *                 |
+     * >--(c)----------*--------------->
+     * </pre>
+     * 
+     * @param a first integer to select median from
+     * @param b second integer to select median from
+     * @param c third integer to select median from
+     * @return the median value
+     */
     static long med3( final long a, final long b, final long c )
     {
         final long d = max( a, b );
@@ -142,6 +169,49 @@ final class Utils
         final long f = max( e, c );
         final long g = min( d, f );
         return g;
+    }
+
+    /**
+     * Select median of five integers.
+     * <p>
+     * The implementation is based on the following sorting network:
+     * 
+     * <pre>
+     * >--(a)--*--(f)--*---(j)--*----------------------->
+     *         |       |        |
+     * >--(b)--*--(g)--+*--(k)--*--(n)--*--------------->
+     *                 ||               |
+     * >--(c)--*--(h)--*+--(l)--*--(o)--*--(q)--*--(s)-->
+     *         |        |       |               |
+     * >--(d)--*--(i)---+-------*--(p)--*--(r)--*------->
+     *                  |               |
+     * >--(e)-----------*--(m)----------*--------------->
+     * </pre>
+     * 
+     * @param a first integer to select median from
+     * @param b second integer to select median from
+     * @param c third integer to select median from
+     * @param d fourth integer to select median from
+     * @param e fifth integer to select median from
+     * @return the median value
+     */
+    static int med5( final int a, final int b, final int c, final int d, final int e )
+    {
+        final int f = max( a, b );
+        final int g = min( a, b );
+        final int h = max( c, d );
+        final int i = min( c, d );
+        final int j = max( f, h );
+        final int k = max( g, e );
+        final int l = min( f, h );
+        final int m = min( g, e );
+        final int n = min( j, k );
+        final int o = max( l, i );
+        final int p = min( l, i );
+        final int q = min( n, o );
+        final int r = max( p, m );
+        final int s = max( q, r );
+        return s;
     }
 
     /**

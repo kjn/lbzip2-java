@@ -44,6 +44,8 @@ package org.lbzip2.impl;
 import static java.lang.Math.min;
 import static org.lbzip2.impl.Utils.ilog2_16;
 import static org.lbzip2.impl.Utils.isqrt;
+import static org.lbzip2.impl.Utils.med3;
+import static org.lbzip2.impl.Utils.med5;
 
 /**
  * A class implementing substring sort used in construction of Burrows–Wheeler transform.
@@ -213,107 +215,42 @@ public final class SubstringSort
         }
     }
 
-    /*---------------------------------------------------------------------------*/
-
-    /* Returns the median of three elements. */
-    private final int ss_median3( final byte[] T, final int depth, final int[] SA, final int xpa, int v1, int v2,
-                                  final int v3 )
+    private final int ss_pivot_key( final byte[] T, final int depth, final int[] SA, final int xpa, final int p )
     {
-        int t;
-        if ( T[SA[xpa + SA[v1]] + depth] > T[SA[xpa + SA[v2]] + depth] )
-        {
-            t = v1;
-            v1 = v2;
-            v2 = t;
-        }
-        if ( T[SA[xpa + SA[v2]] + depth] > T[SA[xpa + SA[v3]] + depth] )
-        {
-            if ( T[SA[xpa + SA[v1]] + depth] > T[SA[xpa + SA[v3]] + depth] )
-            {
-                return v1;
-            }
-            else
-            {
-                return v3;
-            }
-        }
-        return v2;
-    }
-
-    /* Returns the median of five elements. */
-    private final int ss_median5( final byte[] T, final int depth, final int[] SA, final int xpa, int v1, int v2,
-                                  int v3, int v4, int v5 )
-    {
-        int t;
-        if ( T[SA[xpa + SA[v2]] + depth] > T[SA[xpa + SA[v3]] + depth] )
-        {
-            t = v2;
-            v2 = v3;
-            v3 = t;
-        }
-        if ( T[SA[xpa + SA[v4]] + depth] > T[SA[xpa + SA[v5]] + depth] )
-        {
-            t = v4;
-            v4 = v5;
-            v5 = t;
-        }
-        if ( T[SA[xpa + SA[v2]] + depth] > T[SA[xpa + SA[v4]] + depth] )
-        {
-            t = v2;
-            v2 = v4;
-            v4 = t;
-            t = v3;
-            v3 = v5;
-            v5 = t;
-        }
-        if ( T[SA[xpa + SA[v1]] + depth] > T[SA[xpa + SA[v3]] + depth] )
-        {
-            t = v1;
-            v1 = v3;
-            v3 = t;
-        }
-        if ( T[SA[xpa + SA[v1]] + depth] > T[SA[xpa + SA[v4]] + depth] )
-        {
-            t = v1;
-            v1 = v4;
-            v4 = t;
-            t = v3;
-            v3 = v5;
-            v5 = t;
-        }
-        if ( T[SA[xpa + SA[v3]] + depth] > T[SA[xpa + SA[v4]] + depth] )
-        {
-            return v4;
-        }
-        return v3;
+        return ( T[SA[xpa + SA[p]] + depth] << 24 ) + p;
     }
 
     /* Returns the pivot element. */
     private final int ss_pivot( final byte[] T, final int depth, final int[] SA, final int xpa, int first, int last )
     {
-        int middle;
-        int t;
+        int t = ( last - first ) >> 1;
+        final int middle = first + t;
 
-        t = last - first;
-        middle = first + t / 2;
+        final int v1 = ss_pivot_key( T, depth, SA, xpa, first );
+        final int v5 = ss_pivot_key( T, depth, SA, xpa, middle );
+        final int v9 = ss_pivot_key( T, depth, SA, xpa, last - 1 );
 
-        if ( t <= 512 )
+        if ( t <= 16 )
         {
-            if ( t <= 32 )
-            {
-                return ss_median3( T, depth, SA, xpa, first, middle, last - 1 );
-            }
-            else
-            {
-                t >>= 2;
-                return ss_median5( T, depth, SA, xpa, first, first + t, middle, last - 1 - t, last - 1 );
-            }
+            return med3( v1, v5, v9 ) & 0xFFFFFF;
         }
-        t >>= 3;
-        first = ss_median3( T, depth, SA, xpa, first, first + t, first + ( t << 1 ) );
-        middle = ss_median3( T, depth, SA, xpa, middle - t, middle, middle + t );
-        last = ss_median3( T, depth, SA, xpa, last - 1 - ( t << 1 ), last - 1 - t, last - 1 );
-        return ss_median3( T, depth, SA, xpa, first, middle, last );
+
+        t >>= 1;
+        final int v3 = ss_pivot_key( T, depth, SA, xpa, first + t );
+        final int v7 = ss_pivot_key( T, depth, SA, xpa, last - t );
+
+        if ( t <= 128 )
+        {
+            return med5( v1, v3, v5, v7, v9 ) & 0xFFFFFF;
+        }
+
+        t >>= 1;
+        final int v2 = ss_pivot_key( T, depth, SA, xpa, first + t );
+        final int v4 = ss_pivot_key( T, depth, SA, xpa, middle - t );
+        final int v6 = ss_pivot_key( T, depth, SA, xpa, middle + t );
+        final int v8 = ss_pivot_key( T, depth, SA, xpa, last - t );
+
+        return med3( med3( v1, v2, v3 ), med3( v4, v5, v6 ), med3( v7, v8, v9 ) ) & 0xFFFFFF;
     }
 
     /*---------------------------------------------------------------------------*/
