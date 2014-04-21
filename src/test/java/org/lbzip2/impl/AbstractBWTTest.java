@@ -31,8 +31,8 @@ public abstract class AbstractBWTTest
     @Test
     public void testTrivialTransformation()
     {
-        byte[] B = new byte[] { 'M', 'I', 'S', 'S', 'I', 'S', 'S', 'I', 'P', 'P', 'I' };
-        int[] P = new int[12];
+        byte[] B = new byte[] { 'M', 'I', 'S', 'S', 'I', 'S', 'S', 'I', 'P', 'P', 'I', -1 };
+        int[] P = new int[11];
 
         int idx = bwt.transform( B, P, 11 );
 
@@ -69,8 +69,10 @@ public abstract class AbstractBWTTest
 
             int x0 = x2 + x1;
 
-            int[] P = new int[f0.length + 1];
-            int idx = bwt.transform( f0, P, f0.length );
+            int[] P = new int[f0.length];
+            byte[] f = new byte[f0.length + 1];
+            System.arraycopy( f0, 0, f, 0, f0.length );
+            int idx = bwt.transform( f, P, f0.length );
             assertEquals( x0 + d, idx );
 
             for ( int i = 0; i < f2.length; i++ )
