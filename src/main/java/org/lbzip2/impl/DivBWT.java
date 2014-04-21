@@ -1000,28 +1000,25 @@ tr_pivot(int[] SA, int depth, int num_bstar,
 
 /*---------------------------------------------------------------------------*/
 
-typedef struct _trbudget_t trbudget_t;
-struct _trbudget_t {
   int chance;
   int remain;
   int incval;
   int count;
-};
 
 private
 void
-trbudget_init(trbudget_t SA[budget], int chance, int incval) {
-  budget->chance = chance;
-  budget->remain = budget->incval = incval;
+trbudget_init(int chance, int incval) {
+  this.chance = chance;
+  this.remain = this.incval = incval;
 }
 
 private
 int
-trbudget_check(trbudget_t SA[budget], int size) {
-  if(size <= budget->remain) { budget->remain -= size; return 1; }
-  if(budget->chance == 0) { budget->count += size; return 0; }
-  budget->remain += budget->incval - size;
-  budget->chance -= 1;
+trbudget_check(int size) {
+  if(size <= this.remain) { this.remain -= size; return 1; }
+  if(this.chance == 0) { this.count += size; return 0; }
+  this.remain += this.incval - size;
+  this.chance -= 1;
   return 1;
 }
 
@@ -1143,7 +1140,7 @@ private
 void
 tr_introsort(int[] SA, int depth, int num_bstar,
              int first, int last,
-             trbudget_t SA[budget]) {
+             ) {
   int[] stack = new int[5 * TR_STACKSIZE];
   int a, b, c;
   int t;
@@ -1245,7 +1242,7 @@ tr_introsort(int[] SA, int depth, int num_bstar,
           if(++a < last) { for(b = first, v = a - SA - 1; b < a; ++b) { SA[num_bstar + SA[b]] = v; } }
 
           /* push */
-          if(trbudget_check(budget, a - first)) {
+          if(trbudget_check(a - first)) {
             if((a - first) <= (last - a)) {
               ssize = STACK_PUSH5(stack, ssize, depth, a, last, -3, trlink);
               depth += incr, last = a, limit = next;
@@ -1318,7 +1315,7 @@ tr_introsort(int[] SA, int depth, int num_bstar,
       if(b < last) { for(c = a, v = b - SA - 1; c < b; ++c) { SA[num_bstar + SA[c]] = v; } }
 
       /* push */
-      if((1 < (b - a)) && (trbudget_check(budget, b - a))) {
+      if((1 < (b - a)) && (trbudget_check(b - a))) {
         if((a - first) <= (last - b)) {
           if((last - b) <= (b - a)) {
             if(1 < (a - first)) {
@@ -1409,7 +1406,7 @@ tr_introsort(int[] SA, int depth, int num_bstar,
         }
       }
     } else {
-      if(trbudget_check(budget, last - first)) {
+      if(trbudget_check(last - first)) {
         limit = (incr < (num_bstar - depth)) ? ((SA[num_bstar + SA[first]] != TR_GETC(SA, depth, num_bstar, SA[first])) ? (limit + 1) : -1) : -3;
         depth += incr;
       } else {
@@ -1437,11 +1434,10 @@ private
 void
 trsort(int[] SA, int n, int depth) {
   int first, last, a;
-  trbudget_t budget;
   int t, skip, unsorted;
 
   if (-n >= SA[0]) { return; }
-  trbudget_init(&budget, tr_ilg(n) * 2 / 3, n);
+  trbudget_init(tr_ilg(n) * 2 / 3, n);
   for(;; depth += depth) {
     assert(n > depth);
     first = SA;
