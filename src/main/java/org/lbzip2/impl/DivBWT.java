@@ -1595,7 +1595,7 @@ note:
       SA[SA[--j + m]] = ((1 < (t - i))) ? t : ~t;
     }
   }
-  if(SA[SA[m]] == ~((int)0)) {
+  if(SA[SA[m]] == ~0) {
     /* check last type */
     if(T[n - 1] <= T[0]) { /* is type B? */
       SA[SA[m]] = 0;
@@ -1652,7 +1652,7 @@ construct_BWT(byte[] T, int SA,
         else { t = n - 1; orig = j - SA; }
         assert(T[t] <= T[s]);
         c0 = T[t];
-        SA[j] = ~((int)c0);
+        SA[j] = ~c0;
         if(c0 != c2) {
           if(0 <= c2) { BUCKET_B(bucket, c2, c1) = k - SA; }
           k = SA + BUCKET_B(bucket, c2 = c0, c1);
