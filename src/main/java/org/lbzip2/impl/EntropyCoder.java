@@ -35,24 +35,62 @@ import org.slf4j.LoggerFactory;
 /**
  * @author Mikolaj Izdebski
  */
-class EntropyCoder
+final class EntropyCoder
 {
     private final Logger logger = LoggerFactory.getLogger( EntropyCoder.class );
 
+    /**
+     * A constant used to determine number of iterations of Expectation-Maximization algorithm.
+     * <p>
+     * More iterations possibly give higher compression ratio, but also increased CPU usage.
+     */
     private final int cluster_factor;
 
+    /**
+     * Number of selectors used to encode current block (1-18001).
+     */
     int num_selectors;
 
+    /**
+     * Number of prefix trees used to encode current block (2-6).
+     */
     int num_trees;
 
+    /**
+     * Code length table.
+     * <p>
+     * {@code length[t][s]} holds code length of symbol {@code s} in tree {@code t}. {@code length[t][MAX_ANPHA_SIZE]}
+     * is a sentinel for all trees {@code t}.
+     */
     final byte[][] length = new byte[MAX_TREES][MAX_ALPHA_SIZE + 1];
 
+    /**
+     * Code table.
+     * <p>
+     * {@code code[t][s]} holds code of symbol {@code s} in tree {@code t}. {@code code[t][MAX_ANPHA_SIZE]} is a
+     * sentinel for all trees {@code t}.
+     */
     final int[][] code = new int[MAX_TREES][MAX_ALPHA_SIZE + 1];
 
+    /**
+     * Selector table.
+     * <p>
+     * {@code selector[g]} is a tree number used to encode group {@code g}. {@code selector[MAX_SELECTORS]} is used as a
+     * sentinel.
+     */
     final byte[] selector = new byte[MAX_SELECTORS + 1];
 
+    /**
+     * Mapping between new and old tree numbers.
+     * <p>
+     * The initial tree order is changed to improve compression ratio, but the coding tables are not reordered to avoid
+     * memory copying. Instead permutation tables are used to convert between new and old indices.
+     */
     final int[] tmap_new2old = new int[MAX_TREES];
 
+    /**
+     * Mapping between old and new tree numbers.
+     */
     final int[] tmap_old2new = new int[MAX_TREES];
 
     public EntropyCoder( int cluster_factor )
@@ -66,8 +104,14 @@ class EntropyCoder
     }
 
     /**
-     * Build a prefix-free tree. Because the source alphabet is already sorted, we need not to maintain a priority queue
-     * -- two normal FIFO queues (one for leaves and one for internal nodes) will suffice.
+     * Build a prefix tree from alphabet sorted by symbol weight.
+     * <p>
+     * Because the source alphabet is already sorted, there is no need to maintain a priority queue, but two normal FIFO
+     * queues (one for leaves and one for internal nodes) suffice.
+     * 
+     * @param tree prefix tree
+     * @param weight symbol weights in non-increasing order
+     * @param as alphabet size
      */
     private void build_tree( int[] tree, long[] weight, int as )
     {
@@ -116,7 +160,13 @@ class EntropyCoder
         assert ( t == 0 );
     }
 
-    /* Compute counts from given Huffman tree. The tree itself is clobbered. */
+    /**
+     * Given prefix tree generate code length counts. The tree itself is clobbered.
+     * 
+     * @param count code length counts
+     * @param tree prefix tree
+     * @param as alphabet size
+     */
     private void compute_depths( int[] count, int[] tree, int as )
     {
         int avail; /* total number of nodes at current level */
@@ -207,6 +257,24 @@ class EntropyCoder
         }
     }
 
+    /**
+     * Generate an optimal set of code lengths to encode given alphabet.
+     * <p>
+     * The initial alphabet is provided in natural (unsorted) order. In the first stage it is sorted by weights, which
+     * are derived from frequencies. This stage is necessary in order to keep all subsequent stages in linear time.
+     * Counting sort is used because the alphabet has small size and it is expected to be almost sorted.
+     * <p>
+     * In the next step a prefix tree is constructed using a modified Huffman algorithm, which runs in linear time. Then
+     * the tree is traversed and code lengths are counted. Finally each symbol is assigned its code length.
+     * <p>
+     * Note that the resulting code set may have codes of length exceeding 20 bits, but this is not a problem as it is
+     * used only for estimating group quality while the final length-limited code set is generated using Package-Merge
+     * algorithm.
+     * 
+     * @param length resulting code lengths for the source (unsorted) alphabet
+     * @param frequency symbol frequencies
+     * @param as alphabet size
+     */
     private void make_code_lengths( byte[] length, int[] frequency, int as )
     {
         int i;
@@ -264,11 +332,15 @@ class EntropyCoder
     /**
      * Create initial mapping of symbols to trees.
      * <p>
-     * The goal is to divide all as symbols [0,as) into nt equivalence classes (EC) [0,nt) such that standard deviation
-     * of symbol frequencies in classes is minimal. We use a kind of a heuristic to achieve that. There might exist a
-     * better way to achieve that, but this one seems to be good (and fast) enough.
+     * The goal is to divide all as symbols {@code [0,as)} into {@code nt} equivalence classes (EC) {@code [0,nt)} such
+     * that standard deviation of symbol frequencies in classes is minimal. A kind of a heuristic is used to achieve
+     * that. There might exist a better way to achieve that, but this one seems to be good (and fast) enough.
      * <p>
-     * If the symbol v belongs to the equivalence class t then set length[t][v] to zero. Otherwise set it to 1.
+     * If the symbol {@code v} belongs to the equivalence class {@code t} then set {@code length[t][v]} to zero.
+     * Otherwise set it to 1.
+     * 
+     * @param nm number of MTF values (number of symbols)
+     * @param nt number of trees to use
      */
     private void generate_initial_trees( int nm, int nt )
     {
@@ -344,6 +416,12 @@ class EntropyCoder
     /**
      * Find the tree which takes the least number of bits to encode current group. Return number from 0 to nt-1
      * identifying the selected tree.
+     * 
+     * @param mtfv MTF values
+     * @param gs group start index
+     * @param nt number of trees
+     * @param len_pack packed code lengths
+     * @return best tree number
      */
     private int find_best_tree( short[] mtfv, int gs, int nt, long[] len_pack )
     {
@@ -384,7 +462,7 @@ class EntropyCoder
     /**
      * Assign prefix-free codes. Return cost of transmitting the tree and all symbols it codes.
      */
-    int assign_codes( int[] code, byte[] length, int[] frequency, int as )
+    private int assign_codes( int[] code, byte[] length, int[] frequency, int as )
     {
         int leaf;
         int avail;
@@ -493,7 +571,7 @@ class EntropyCoder
     }
 
     /**
-     * The main function generating prefix code for the whole block.
+     * The main function for generating prefix code for the whole block.
      * <p>
      * Input: MTF values Output: trees and selectors
      * <p>

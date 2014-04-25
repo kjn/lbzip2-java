@@ -144,10 +144,19 @@ class Constants
      */
     static final int MAX_TREES = 6;
 
+    /**
+     * Maximal length of a single run in the initial RLE transformation.
+     */
     static final int MAX_RUN_LENGTH = 4 + 255;
 
+    /**
+     * Maximal size of a single coding group.
+     */
     static final int GROUP_SIZE = 50;
 
+    /**
+     * Number of positions that unsigned 8-bit integer range is shifted by with reference to signed integer range.
+     */
     static final int CHARACTER_BIAS = 128;
 
     /**

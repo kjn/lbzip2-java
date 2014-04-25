@@ -129,7 +129,9 @@ final class DivBWT
 
     /*- Private Functions -*/
 
-    /* Sorts suffixes of type B*. */
+    /**
+     * Sort suffixes of type B*.
+     */
     private final int sort_typeBstar( final byte[] T, final int[] SA, final int[] bucket, final int n )
     {
         int xpa;
@@ -366,6 +368,9 @@ final class DivBWT
         return m;
     }
 
+    /**
+     * Construct BWT transform using sorted order of type B* suffixes.
+     */
     private final int construct_BWT( final byte[] T, final int[] SA, final int[] bucket, final int n )
     {
         int i, j, k;
@@ -472,6 +477,13 @@ final class DivBWT
 
     /*- Function -*/
 
+    /**
+     * Construct BWT transform of text T[0..n-1] and store it in SA[0..n-1].
+     * <p>
+     * Length of T must be at least n+1 as T[n] may be used as a sentinel.
+     * 
+     * @return BWT primary index
+     */
     public final int transform( final byte[] T, final int[] SA, final int n )
     {
         int m, pidx, i;
