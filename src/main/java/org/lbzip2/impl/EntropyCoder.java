@@ -25,6 +25,7 @@ import static org.lbzip2.impl.Constants.MAX_HUFF_CODE_LENGTH;
 import static org.lbzip2.impl.Constants.MAX_SELECTORS;
 import static org.lbzip2.impl.Constants.MAX_TREES;
 import static org.lbzip2.impl.Constants.MIN_ALPHA_SIZE;
+import static org.lbzip2.impl.Utils.ilog2;
 import static org.lbzip2.impl.Utils.insertion_sort;
 
 import java.util.Arrays;
@@ -600,7 +601,7 @@ final class EntropyCoder
          * needed to transmit additional trees is traded against the space saved by using more trees.
          */
         assert ( nm >= 2 );
-        nt = ( nm > 2400 ? 6 : nm > 1200 ? 5 : nm > 600 ? 4 : nm > 300 ? 3 : nm > 150 ? 2 : 1 );
+        nt = min( ilog2( ( nm - 1 ) / 150 ) + 2, MAX_TREES );
 
         /* Complete the last group with dummy symbols. */
         for ( i = nm; i < num_selectors * GROUP_SIZE; i++ )
