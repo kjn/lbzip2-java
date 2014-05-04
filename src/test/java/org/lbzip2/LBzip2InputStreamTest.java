@@ -15,55 +15,39 @@
  */
 package org.lbzip2;
 
-import java.io.FileInputStream;
-import java.io.IOException;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 
 /**
  * @author Mikolaj Izdebski
  */
-public class Main
+public class LBzip2InputStreamTest
+    extends AbstractDecompressorTest
 {
-    private static void processFile( InputStream is )
-        throws IOException
-    {
-        if ( System.getProperty( "org.lbzip2.mbc" ) != null )
-        {
-            MBC mbc = new MBC( is, System.out );
-            mbc.expand();
-        }
-        else
-        {
-            InputStream zis = new LBzip2InputStream( is );
-
-            byte[] buf = new byte[4096];
-            int r;
-            while ( ( r = zis.read( buf ) ) != -1 )
-                System.out.write( buf, 0, r );
-
-            zis.close();
-        }
-    }
-
-    public static void main( String[] args )
+    @Override
+    protected void oneFile( InputStream fis, String md5 )
+        throws Exception
     {
         try
         {
-            if ( args.length != 0 )
-            {
-                for ( String arg : args )
-                {
-                    processFile( new FileInputStream( arg ) );
-                }
-            }
-            else
-            {
-                processFile( System.in );
-            }
+            LBzip2InputStream zis = new LBzip2InputStream( fis );
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            byte[] buf = new byte[4096];
+            int r;
+            while ( ( r = zis.read( buf ) ) != -1 )
+                out.write( buf, 0, r );
+            zis.close();
+            if ( md5 == null )
+                fail();
+            assertEquals( md5, md5( out.toByteArray() ) );
         }
-        catch ( IOException e )
+        catch ( StreamFormatException e )
         {
-            e.printStackTrace();
+            if ( md5 != null )
+                throw e;
         }
     }
 }
