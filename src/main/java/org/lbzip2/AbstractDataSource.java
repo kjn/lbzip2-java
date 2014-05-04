@@ -20,40 +20,20 @@ import java.io.IOException;
 /**
  * @author Mikolaj Izdebski
  */
-public class StreamComposser
-    extends AbstractDataSource
+abstract class AbstractDataSource
+    implements DataSource
 {
-    public StreamComposser()
-    {
-        // TODO Auto-generated constructor stub
-    }
+    private final byte[] buf = new byte[1];
 
-    public StreamComposser( int maxBlockSize )
-    {
-        // TODO Auto-generated constructor stub
-    }
-
-    public void addBlock( CompressedBlock block )
-    {
-        // TODO Auto-generated method stub
-    }
-
-    public void finish()
-    {
-        // TODO Auto-generated method stub
-    }
-
-    public boolean isEmpty()
+    public final int read()
         throws IOException
     {
-        // TODO Auto-generated method stub
-        return false;
+        return read( buf, 0, 1 ) != 0 ? buf[0] & 0xFF : -1;
     }
 
-    public int read( byte[] buf, int off, int len )
+    public final int read( byte[] buf )
         throws IOException
     {
-        // TODO Auto-generated method stub
-        return 0;
+        return read( buf, 0, buf.length );
     }
 }

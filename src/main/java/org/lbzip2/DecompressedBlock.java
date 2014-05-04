@@ -21,27 +21,13 @@ import java.io.IOException;
  * @author Mikolaj Izdebski
  */
 public class DecompressedBlock
-    implements DataSource
+    extends AbstractDataSource
 {
     public boolean isEmpty()
         throws IOException
     {
         // TODO Auto-generated method stub
         return false;
-    }
-
-    public int read()
-        throws IOException
-    {
-        // TODO Auto-generated method stub
-        return 0;
-    }
-
-    public int read( byte[] buf )
-        throws IOException
-    {
-        // TODO Auto-generated method stub
-        return 0;
     }
 
     public int read( byte[] buf, int off, int len )

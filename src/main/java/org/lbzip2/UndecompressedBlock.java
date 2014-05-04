@@ -20,7 +20,7 @@ package org.lbzip2;
  */
 public class UndecompressedBlock
 {
-    public DecompressedBlock deccompress()
+    public AbstractDataSource deccompress()
     {
         // TODO Auto-generated method stub
         return null;
