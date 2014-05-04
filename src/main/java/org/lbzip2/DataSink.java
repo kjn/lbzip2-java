@@ -25,9 +25,6 @@ public interface DataSink
     boolean isFull()
         throws IOException;
 
-    int write( int b )
-        throws IOException;
-
     int write( byte[] buf )
         throws IOException;
 

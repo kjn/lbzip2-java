@@ -23,15 +23,6 @@ import java.io.IOException;
 abstract class AbstractDataSink
     implements DataSink
 {
-    private final byte[] buf = new byte[1];
-
-    public final int write( int b )
-        throws IOException
-    {
-        buf[0] = (byte) b;
-        return write( buf, 0, 1 );
-    }
-
     public final int write( byte[] buf )
         throws IOException
     {

@@ -23,14 +23,6 @@ import java.io.IOException;
 abstract class AbstractDataSource
     implements DataSource
 {
-    private final byte[] buf = new byte[1];
-
-    public final int read()
-        throws IOException
-    {
-        return read( buf, 0, 1 ) != 0 ? buf[0] & 0xFF : -1;
-    }
-
     public final int read( byte[] buf )
         throws IOException
     {

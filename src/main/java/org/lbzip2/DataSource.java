@@ -25,9 +25,6 @@ public interface DataSource
     boolean isEmpty()
         throws IOException;
 
-    int read()
-        throws IOException;
-
     int read( byte[] buf )
         throws IOException;
 
