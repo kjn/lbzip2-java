@@ -150,6 +150,11 @@ class Constants
     static final int MAX_RUN_LENGTH = 4 + 255;
 
     /**
+     * Maximal size of a block.
+     */
+    static final int MAX_BLOCK_SIZE = 900000;
+
+    /**
      * Maximal size of a single coding group.
      */
     static final int GROUP_SIZE = 50;

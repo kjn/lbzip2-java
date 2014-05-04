@@ -15,43 +15,57 @@
  */
 package org.lbzip2;
 
+import static org.lbzip2.Constants.MAX_BLOCK_SIZE;
+
 /**
  * @author Mikolaj Izdebski
  */
 public class UncompressedBlock
     extends AbstractDataSink
 {
+    final Collector collector;
+
+    private boolean pending;
+
+    private boolean full;
+
+    private final int[] p_buf_sz = new int[1];
+
     public UncompressedBlock()
     {
-        // TODO Auto-generated constructor stub
+        this( MAX_BLOCK_SIZE );
     }
 
     public UncompressedBlock( int maxBlockSize )
     {
-        // TODO Auto-generated constructor stub
+        collector = new Collector( maxBlockSize );
     }
 
     public boolean isEmpty()
     {
-        // TODO Auto-generated method stub
-        return false;
+        return !pending;
     }
 
     public boolean isFull()
     {
-        // TODO Auto-generated method stub
-        return false;
+        return full;
     }
 
     public int write( byte[] buf, int off, int len )
     {
-        // TODO Auto-generated method stub
-        return 0;
+        p_buf_sz[0] = len;
+
+        if ( len > 0 )
+        {
+            pending = true;
+            full = collector.collect( buf, off, p_buf_sz );
+        }
+
+        return len - p_buf_sz[0];
     }
 
     public CompressedBlock compress()
     {
-        // TODO Auto-generated method stub
-        return null;
+        return new CompressedBlock( this );
     }
 }

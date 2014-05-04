@@ -20,5 +20,17 @@ package org.lbzip2;
  */
 public class CompressedBlock
 {
-    // TODO Auto-generated stub
+    final Encoder encoder;
+
+    final int compressedSize;
+
+    final int crc;
+
+    CompressedBlock( UncompressedBlock uncompressedBlock )
+    {
+        encoder = new Encoder( uncompressedBlock.collector, new EntropyCoder( 10 ) );
+        int[] p_crc = new int[1];
+        compressedSize = encoder.encode( p_crc );
+        crc = p_crc[0];
+    }
 }
