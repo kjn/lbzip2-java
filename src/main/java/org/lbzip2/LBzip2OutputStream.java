@@ -27,31 +27,20 @@ public class LBzip2OutputStream
 {
     private final OutputStream os;
 
+    private final StreamComposer composer;
+
+    private final UncompressedBlock block;
+
     private final byte[] buf1 = new byte[1];
 
-    private final Collector col;
+    private final byte[] buf = new byte[4096];
 
-    private final EntropyCoder ec;
-
-    private final Encoder enc;
-
-    private boolean pending;
-
-    private int combined_crc;
-
-    public LBzip2OutputStream( OutputStream os, int max_block_size, int cluster_factor )
+    public LBzip2OutputStream( OutputStream os, int maxBlockSize )
         throws IOException
     {
         this.os = os;
-
-        col = new Collector( max_block_size );
-        col.reset();
-
-        ec = new EntropyCoder( cluster_factor );
-
-        enc = new Encoder( col, ec );
-
-        writeHeader( max_block_size );
+        composer = new StreamComposer( maxBlockSize );
+        block = new UncompressedBlock( maxBlockSize );
     }
 
     @Override
@@ -62,77 +51,36 @@ public class LBzip2OutputStream
         write( buf1, 0, 1 );
     }
 
-    private void writeHeader( int max_block_size )
-        throws IOException
-    {
-        byte[] buffer = new byte[4];
-        buffer[0] = 0x42;
-        buffer[1] = 0x5A;
-        buffer[2] = 0x68;
-        buffer[3] = (byte) ( 0x30 + ( max_block_size + 100000 - 1 ) / 100000 );
-        os.write( buffer );
-    }
-
-    private void writeTrailer()
-        throws IOException
-    {
-        byte[] buffer = new byte[10];
-        buffer[0] = 0x17;
-        buffer[1] = 0x72;
-        buffer[2] = 0x45;
-        buffer[3] = 0x38;
-        buffer[4] = 0x50;
-        buffer[5] = (byte) 0x90;
-        buffer[6] = (byte) ( combined_crc >> 24 );
-        buffer[7] = (byte) ( combined_crc >> 16 );
-        buffer[8] = (byte) ( combined_crc >> 8 );
-        buffer[9] = (byte) combined_crc;
-        os.write( buffer );
-    }
-
     @Override
-    public void write( byte[] b, int off, int avail )
+    public void write( byte[] buf, int off, int avail )
         throws IOException
     {
-        int[] p_buf_sz = new int[1];
-
         while ( avail > 0 )
         {
-            pending = true;
-            p_buf_sz[0] = avail;
-            boolean full = col.collect( b, off, p_buf_sz );
-            off += avail - p_buf_sz[0];
-            avail = p_buf_sz[0];
+            int written = block.write( buf, off, avail );
+            off += written;
+            avail -= written;
 
-            if ( full )
-            {
-                flushBlock();
-            }
+            if ( block.isFull() )
+                transmit();
         }
     }
 
-    private void flushBlock()
+    private void transmit()
         throws IOException
     {
-        if ( pending )
-        {
-            int[] p_crc = new int[1];
-            col.finish();
-            int size = enc.encode( p_crc );
-            combined_crc = ( ( combined_crc << 1 ) ^ ( combined_crc >>> 31 ) ^ p_crc[0] ^ -1 );
-            byte[] buf = new byte[size];
-            enc.transmit( buf );
-            os.write( buf );
-            pending = false;
-            col.reset();
-        }
+        if ( !block.isEmpty() )
+            composer.addBlock( block.compress() );
+
+        while ( !composer.isEmpty() )
+            os.write( buf, 0, composer.read( buf ) );
     }
 
     @Override
     public void flush()
         throws IOException
     {
-        flushBlock();
+        transmit();
         os.flush();
     }
 
@@ -140,8 +88,9 @@ public class LBzip2OutputStream
     public void close()
         throws IOException
     {
-        flushBlock();
-        writeTrailer();
+        transmit();
+        composer.finish();
+        transmit();
         os.close();
     }
 
@@ -150,7 +99,7 @@ public class LBzip2OutputStream
         try
         {
             InputStream is = System.in;
-            OutputStream os = new LBzip2OutputStream( System.out, 900000, 10 );
+            OutputStream os = new LBzip2OutputStream( System.out, 900000 );
             byte[] buf = new byte[4096];
             int n;
             while ( ( n = is.read( buf ) ) > 0 )

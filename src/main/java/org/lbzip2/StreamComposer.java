@@ -20,18 +20,22 @@ import static org.lbzip2.Constants.MAX_BLOCK_SIZE;
 /**
  * @author Mikolaj Izdebski
  */
-public class StreamComposser
+public class StreamComposer
     extends CompoundDataSource
 {
     private int combinedCrc;
 
-    public StreamComposser()
+    private final int maxBlockSize;
+
+    public StreamComposer()
     {
         this( MAX_BLOCK_SIZE );
     }
 
-    public StreamComposser( int maxBlockSize )
+    public StreamComposer( int maxBlockSize )
     {
+        this.maxBlockSize = maxBlockSize;
+
         byte[] buffer = new byte[4];
         buffer[0] = 0x42;
         buffer[1] = 0x5A;
