@@ -20,26 +20,21 @@ import java.io.IOException;
 /**
  * @author Mikolaj Izdebski
  */
-public class StreamDecomposer
-    extends AbstractDataSink
+abstract class AbstractDataSink
+    implements DataSink
 {
-    public boolean isFull()
+    private final byte[] buf = new byte[1];
+
+    public final int write( int b )
         throws IOException
     {
-        // TODO Auto-generated method stub
-        return false;
+        buf[0] = (byte) b;
+        return write( buf, 0, 1 );
     }
 
-    public int write( byte[] buf, int off, int len )
+    public final int write( byte[] buf )
         throws IOException
     {
-        // TODO Auto-generated method stub
-        return 0;
-    }
-
-    public UndecompressedBlock extractBlock()
-    {
-        // TODO Auto-generated method stub
-        return null;
+        return write( buf, 0, buf.length );
     }
 }

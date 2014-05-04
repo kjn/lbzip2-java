@@ -19,7 +19,7 @@ package org.lbzip2;
  * @author Mikolaj Izdebski
  */
 public class UncompressedBlock
-    implements DataSink
+    extends AbstractDataSink
 {
     public UncompressedBlock()
     {
@@ -41,18 +41,6 @@ public class UncompressedBlock
     {
         // TODO Auto-generated method stub
         return false;
-    }
-
-    public int write( int b )
-    {
-        // TODO Auto-generated method stub
-        return 0;
-    }
-
-    public int write( byte[] buf )
-    {
-        // TODO Auto-generated method stub
-        return 0;
     }
 
     public int write( byte[] buf, int off, int len )
