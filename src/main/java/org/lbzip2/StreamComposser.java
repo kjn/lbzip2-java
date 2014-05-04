@@ -15,45 +15,49 @@
  */
 package org.lbzip2;
 
-import java.io.IOException;
+import static org.lbzip2.Constants.MAX_BLOCK_SIZE;
 
 /**
  * @author Mikolaj Izdebski
  */
 public class StreamComposser
-    extends AbstractDataSource
+    extends CompoundDataSource
 {
+    private int combinedCrc;
+
     public StreamComposser()
     {
-        // TODO Auto-generated constructor stub
+        this( MAX_BLOCK_SIZE );
     }
 
     public StreamComposser( int maxBlockSize )
     {
-        // TODO Auto-generated constructor stub
+        byte[] buffer = new byte[4];
+        buffer[0] = 0x42;
+        buffer[1] = 0x5A;
+        buffer[2] = 0x68;
+        buffer[3] = (byte) ( 0x30 + ( maxBlockSize + 100000 - 1 ) / 100000 );
+        addSource( new ByteArrayDataSource( buffer ) );
     }
 
     public void addBlock( CompressedBlock block )
     {
-        // TODO Auto-generated method stub
+        combinedCrc = ( ( combinedCrc << 1 ) ^ ( combinedCrc >>> 31 ) ^ block.crc ^ -1 );
     }
 
     public void finish()
     {
-        // TODO Auto-generated method stub
-    }
-
-    public boolean isEmpty()
-        throws IOException
-    {
-        // TODO Auto-generated method stub
-        return false;
-    }
-
-    public int read( byte[] buf, int off, int len )
-        throws IOException
-    {
-        // TODO Auto-generated method stub
-        return 0;
+        byte[] buffer = new byte[10];
+        buffer[0] = 0x17;
+        buffer[1] = 0x72;
+        buffer[2] = 0x45;
+        buffer[3] = 0x38;
+        buffer[4] = 0x50;
+        buffer[5] = (byte) 0x90;
+        buffer[6] = (byte) ( combinedCrc >> 24 );
+        buffer[7] = (byte) ( combinedCrc >> 16 );
+        buffer[8] = (byte) ( combinedCrc >> 8 );
+        buffer[9] = (byte) combinedCrc;
+        addSource( new ByteArrayDataSource( buffer ) );
     }
 }
