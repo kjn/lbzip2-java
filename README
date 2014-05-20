@@ -1,6 +1,38 @@
+lbzip2-java
+===========
+
 http://lbzip2.org/
 
 lbzip2-java is going to be a high-performance Java implementation of
 lbzip2 compression and decompression algorithms.
 
+lbzip2-java is free software. You can redistribute and/or modify it
+under the terms of Apache License Version 2.0.
+
 The author of lbzip2-java is Mikolaj Izdebski.
+
+
+Current state
+-------------
+
+lbzip2-java is still in initial development.  No release has been made
+yet and API has not been defined yet.  Bugs and feature requests can
+be submitted either at Github or directly to the author by email.  Any
+feedback is also welcome.
+
+
+Planned features
+----------------
+
+In order of descending priority:
+
+  * Low level API for bzip2 compression and decompression, capable of
+    manipulating single bzip2 blocks.
+
+  * High level stream compression and decompression API, implementing
+    InputStream and OutputStream filters.
+
+  * Indexer for bz2 files and API providing random access to indexed
+    bz2 files.
+
+  * Command line utility, compatible with lbzip2 interface.
