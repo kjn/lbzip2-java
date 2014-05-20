@@ -43,6 +43,7 @@ class ByteArrayDataSource
     {
         int size = Math.min( len, array.length - offset );
         System.arraycopy( array, offset, buf, off, size );
+        offset += size;
         return size;
     }
 }
