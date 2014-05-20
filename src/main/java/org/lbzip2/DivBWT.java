@@ -494,7 +494,7 @@ final class DivBWT
         assert ( n > 0 );
         if ( n == 1 )
         {
-            SA[0] = T[0];
+            SA[0] = T[0] + CHARACTER_BIAS;
             return 0;
         }
 
