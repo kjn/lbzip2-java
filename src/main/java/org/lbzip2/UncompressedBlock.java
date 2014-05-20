@@ -69,6 +69,7 @@ public class UncompressedBlock
         collector.finish();
         CompressedBlock compressedBlock = new CompressedBlock( this );
         collector.reset();
+        pending = false;
         return compressedBlock;
 
     }
