@@ -54,6 +54,6 @@ class CompoundDataSource
                 sources.poll();
         }
 
-        return avail - len;
+        return len - avail;
     }
 }
