@@ -33,7 +33,7 @@ public class LBzip2OutputStreamTest
      * @throws Exception
      */
     @Test
-    public void testBug()
+    public void testBug1()
         throws Exception
     {
         OutputStream os = new LBzip2OutputStream( new ByteArrayOutputStream(), 900000 );
