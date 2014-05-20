@@ -41,7 +41,7 @@ class ByteArrayDataSource
     public int read( byte[] buf, int off, int len )
         throws IOException
     {
-        int size = Math.max( len, array.length - offset );
+        int size = Math.min( len, array.length - offset );
         System.arraycopy( array, offset, buf, off, size );
         return size;
     }
