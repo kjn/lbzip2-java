@@ -27,12 +27,17 @@ Planned features
 In order of descending priority:
 
   * Low level API for bzip2 compression and decompression, capable of
-    manipulating single bzip2 blocks.
+    creating, accessing or manipulating bz2 streams at level of single
+    blocks.
 
-  * High level stream compression and decompression API, implementing
-    InputStream and OutputStream filters.
+  * High level stream API, implementing OutputStream and InputStream
+    filters for compression and decompression (respectively), both
+    single- and multi-threaded.
 
   * Indexer for bz2 files and API providing random access to indexed
-    bz2 files.
+    bz2 files (decompression only).  This allows parts of any
+    compressed bz2 file to be read and decompressed as long as a tiny
+    accompanying index file is available.  Like stream decompressor,
+    random-access decompressor is also able to use multiple threads.
 
   * Command line utility, compatible with lbzip2 interface.
