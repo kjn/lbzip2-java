@@ -60,6 +60,10 @@ class Encoder
 
     private final BWT bwt = new DivBWT();
 
+    int block_crc;
+
+    private final boolean[] inuse = new boolean[256];
+
     public Encoder( Collector col, EntropyCoder ec )
     {
         this.col = col;
@@ -148,7 +152,7 @@ class Encoder
         return mtfv_off;
     }
 
-    int encode( int[] crc )
+    int encode()
     {
         int cost;
         int pk;
@@ -244,7 +248,8 @@ class Encoder
 
         out_expect_len = cost;
 
-        crc[0] = col.block_crc;
+        block_crc = col.block_crc;
+        System.arraycopy( col.inuse, 0, inuse, 0, 256 );
 
         logger.debug( "Block transmission cost is {} bytes", cost );
         logger.debug( "Block CRC is {}", String.format( "%08X", col.block_crc ^ -1 ) );
@@ -289,7 +294,7 @@ class Encoder
         /* Transmit block metadata. */
         SEND( 24, 0x314159 );
         SEND( 24, 0x265359 );
-        SEND( 32, col.block_crc ^ -1 );
+        SEND( 32, block_crc ^ -1 );
         SEND( 1, 0 ); /* non-rand */
         SEND( 24, bwt_idx ); /* bwt primary index */
 
@@ -306,7 +311,7 @@ class Encoder
                 for ( int j = 0; j < 16; j++ )
                 {
                     small <<= 1;
-                    if ( col.inuse[16 * i + j] )
+                    if ( inuse[16 * i + j] )
                     {
                         small |= 1;
                         big |= 1;
