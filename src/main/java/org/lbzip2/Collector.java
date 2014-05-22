@@ -32,7 +32,7 @@ class Collector
 
     final int max_block_size;
 
-    int block_crc;
+    int block_crc = -1;
 
     private int rle_state;
 
