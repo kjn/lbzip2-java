@@ -50,6 +50,10 @@ public class StreamComposer
             throw new IllegalArgumentException( "Block too large to be added to this stream" );
 
         combinedCrc = ( ( combinedCrc << 1 ) ^ ( combinedCrc >>> 31 ) ^ block.crc ^ -1 );
+
+        byte[] buffer = new byte[block.compressedSize];
+        block.encoder.transmit( buffer );
+        addSource( new ByteArrayDataSource( buffer ) );
     }
 
     public void finish()
