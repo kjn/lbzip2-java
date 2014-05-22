@@ -19,12 +19,17 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * @author Mikolaj Izdebski
  */
 public class LBzip2OutputStream
     extends OutputStream
 {
+    private final Logger logger = LoggerFactory.getLogger( LBzip2OutputStream.class );
+
     private final OutputStream os;
 
     private final StreamComposer composer;
@@ -62,7 +67,10 @@ public class LBzip2OutputStream
             avail -= written;
 
             if ( block.isFull() )
+            {
+                logger.trace( "Block full, forcing transmission" );
                 transmit();
+            }
         }
     }
 
@@ -70,10 +78,16 @@ public class LBzip2OutputStream
         throws IOException
     {
         if ( !block.isEmpty() )
+        {
+            logger.trace( "Adding block" );
             composer.addBlock( block.compress() );
+        }
 
         while ( !composer.isEmpty() )
+        {
+            logger.trace( "Emptying composer" );
             os.write( buf, 0, composer.read( buf ) );
+        }
     }
 
     @Override
@@ -88,6 +102,7 @@ public class LBzip2OutputStream
     public void close()
         throws IOException
     {
+        logger.trace( "Closing stream" );
         transmit();
         composer.finish();
         transmit();
