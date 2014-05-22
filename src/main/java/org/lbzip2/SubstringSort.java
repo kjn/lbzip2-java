@@ -48,7 +48,7 @@ import static org.lbzip2.Utils.med3;
 import static org.lbzip2.Utils.med5;
 
 /**
- * A class implementing substring sort used in construction of Burrows–Wheeler transform.
+ * A class implementing substring sort used in construction of Burrows-Wheeler transform.
  * 
  * @author Mikolaj Izdebski
  */
