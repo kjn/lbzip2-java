@@ -15,6 +15,8 @@
  */
 package org.lbzip2;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 
@@ -25,6 +27,30 @@ import org.junit.Test;
  */
 public class LBzip2OutputStreamTest
 {
+    /**
+     * Test compression of empty file.
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void testEmptyStream()
+        throws Exception
+    {
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        new LBzip2OutputStream( os, 42 ).close();
+        byte[] out = os.toByteArray();
+
+        byte[] exp =
+            new byte[] { 0x42, 0x5a, 0x68, 0x31, 0x17, 0x72, 0x45, 0x38, 0x50, (byte) 0x90, 0x00, 0x00, 0x00, 0x00 };
+
+        assertEquals( exp.length, out.length );
+
+        for ( int i = 0; i < exp.length; i++ )
+        {
+            assertEquals( "i=" + i, exp[i], out[i] );
+        }
+    }
+
     /**
      * Regression test for bug nr 1.
      * <p>
