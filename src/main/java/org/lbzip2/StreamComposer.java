@@ -46,6 +46,9 @@ public class StreamComposer
 
     public void addBlock( CompressedBlock block )
     {
+        if ( block.blockSize > maxBlockSize )
+            throw new IllegalArgumentException( "Block too large to be added to this stream" );
+
         combinedCrc = ( ( combinedCrc << 1 ) ^ ( combinedCrc >>> 31 ) ^ block.crc ^ -1 );
     }
 

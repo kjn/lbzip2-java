@@ -22,6 +22,8 @@ public class CompressedBlock
 {
     final Encoder encoder;
 
+    final int blockSize;
+
     final int compressedSize;
 
     final int crc;
@@ -30,6 +32,7 @@ public class CompressedBlock
     {
         encoder = new Encoder( uncompressedBlock.collector, new EntropyCoder( 10 ) );
         int[] p_crc = new int[1];
+        blockSize = uncompressedBlock.collector.nblock;
         compressedSize = encoder.encode( p_crc );
         crc = p_crc[0];
     }
