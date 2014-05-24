@@ -98,14 +98,20 @@ public class LBzip2OutputStream
         os.flush();
     }
 
-    @Override
-    public void close()
+    public void finish()
         throws IOException
     {
         logger.trace( "Closing stream" );
         transmit();
         composer.finish();
         transmit();
+    }
+
+    @Override
+    public void close()
+        throws IOException
+    {
+        finish();
         os.close();
     }
 
