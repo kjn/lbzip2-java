@@ -25,8 +25,14 @@ public class UncompressedBlock
 {
     final Collector collector;
 
+    /**
+     * {@code true} iff there is some data pending in this block, i.e. the block is not empty.
+     */
     private boolean pending;
 
+    /**
+     * {@code true} iff no more data can be added to this block, i.e. the block is full.
+     */
     private boolean full;
 
     private final int[] p_buf_sz = new int[1];
@@ -41,11 +47,21 @@ public class UncompressedBlock
         collector = new Collector( maxBlockSize );
     }
 
+    /**
+     * Check whether this block is empty.
+     * 
+     * @return {@code false} if there is some data pending in this block, {@code true} otherwise.
+     */
     public boolean isEmpty()
     {
         return !pending;
     }
 
+    /**
+     * Check whether this block is full.
+     * 
+     * @return {@code true} if no more data can be added to this block, {@code false} otherwise.
+     */
     public boolean isFull()
     {
         return full;
