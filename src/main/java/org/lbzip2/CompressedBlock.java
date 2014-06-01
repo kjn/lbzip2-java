@@ -28,8 +28,8 @@ public class CompressedBlock
 
     CompressedBlock( UncompressedBlock uncompressedBlock )
     {
-        encoder = new Encoder( uncompressedBlock.collector, new EntropyCoder( 10 ) );
-        blockSize = uncompressedBlock.collector.nblock;
+        encoder = new Encoder( uncompressedBlock, new EntropyCoder( 10 ) );
+        blockSize = uncompressedBlock.nblock;
         compressedSize = encoder.encode();
     }
 }

@@ -54,7 +54,7 @@ class Encoder
 
     private int out_expect_len;
 
-    private final Collector col;
+    private final UncompressedBlock col;
 
     private final EntropyCoder ec;
 
@@ -64,7 +64,7 @@ class Encoder
 
     private final boolean[] inuse = new boolean[256];
 
-    public Encoder( Collector col, EntropyCoder ec )
+    public Encoder( UncompressedBlock col, EntropyCoder ec )
     {
         this.col = col;
         this.ec = ec;
