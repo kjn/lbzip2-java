@@ -69,7 +69,7 @@ class Encoder
         this.col = col;
         this.ec = ec;
 
-        mtfv = new short[col.max_block_size + GROUP_SIZE];
+        mtfv = new short[col.size + GROUP_SIZE];
     }
 
     private int do_mtf( int[] SA, int[] mtffreq, int nblock )
@@ -164,11 +164,11 @@ class Encoder
         int p; /* MTF state */
 
         /* Sort block. */
-        assert ( col.nblock > 0 );
-        int[] SA = new int[col.nblock + 1];
-        bwt_idx = bwt.transform( col.block, SA, col.nblock );
-        nmtf = do_mtf( SA, ec.code[0], col.nblock );
-        logger.debug( "Block info: bs={}, idx={}, nm={}, as={}", col.nblock, bwt_idx, nmtf, mtfv[nmtf - 1] + 1 );
+        assert ( col.size > 0 );
+        int[] SA = new int[col.size + 1];
+        bwt_idx = bwt.transform( col.block, SA, col.size );
+        nmtf = do_mtf( SA, ec.code[0], col.size );
+        logger.debug( "Block info: bs={}, idx={}, nm={}, as={}", col.size, bwt_idx, nmtf, mtfv[nmtf - 1] + 1 );
         SA = null;
 
         cost = 48 /* header */
@@ -248,11 +248,11 @@ class Encoder
 
         out_expect_len = cost;
 
-        block_crc = col.block_crc;
+        block_crc = col.crc;
         System.arraycopy( col.inuse, 0, inuse, 0, 256 );
 
         logger.debug( "Block transmission cost is {} bytes", cost );
-        logger.debug( "Block CRC is {}", String.format( "%08X", col.block_crc ^ -1 ) );
+        logger.debug( "Block CRC is {}", String.format( "%08X", col.crc ^ -1 ) );
 
         return cost;
     }

@@ -29,7 +29,7 @@ public class CompressedBlock
     CompressedBlock( UncompressedBlock uncompressedBlock )
     {
         encoder = new Encoder( uncompressedBlock, new EntropyCoder( 10 ) );
-        blockSize = uncompressedBlock.nblock;
+        blockSize = uncompressedBlock.size;
         compressedSize = encoder.encode();
     }
 }

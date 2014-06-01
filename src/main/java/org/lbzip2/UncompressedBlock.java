@@ -18,6 +18,7 @@ package org.lbzip2;
 import static org.lbzip2.Constants.CHARACTER_BIAS;
 import static org.lbzip2.Constants.MAX_BLOCK_SIZE;
 import static org.lbzip2.Constants.MAX_RUN_LENGTH;
+import static org.lbzip2.Constants.MIN_BLOCK_SIZE;
 import static org.lbzip2.Constants.crc_table;
 
 import java.util.Arrays;
@@ -28,28 +29,33 @@ import java.util.Arrays;
 public class UncompressedBlock
     extends AbstractDataSink
 {
-    /**
-     * {@code true} iff there is some data pending in this block, i.e. the block is not empty.
-     */
-    private boolean pending;
+    int size;
 
-    /**
-     * {@code true} iff no more data can be added to this block, i.e. the block is full.
-     */
-    private boolean full;
+    final byte[] block;
 
-    private final int[] p_buf_sz = new int[1];
+    private final int maxSize;
+
+    int crc = -1;
+
+    private int rleState;
+
+    private int rleCharacter;
+
+    final boolean[] inuse = new boolean[256];
 
     public UncompressedBlock()
     {
         this( MAX_BLOCK_SIZE );
     }
 
-    public UncompressedBlock( int maxBlockSize )
+    public UncompressedBlock( int maxSize )
     {
-        this.max_block_size = maxBlockSize;
+        if ( maxSize < MIN_BLOCK_SIZE || maxSize > MAX_BLOCK_SIZE )
+            throw new IllegalStateException( "Invalid maximal block size" );
 
-        block = new byte[maxBlockSize + 1];
+        this.maxSize = maxSize;
+
+        this.block = new byte[maxSize + 1];
     }
 
     /**
@@ -59,7 +65,7 @@ public class UncompressedBlock
      */
     public boolean isEmpty()
     {
-        return !pending;
+        return size == 0;
     }
 
     /**
@@ -69,109 +75,63 @@ public class UncompressedBlock
      */
     public boolean isFull()
     {
-        return full;
+        return rleState < 0;
     }
 
-    public int write( byte[] buf, int off, int len )
+    public int write( byte[] buf, int off, final int len )
     {
-        p_buf_sz[0] = len;
+        if ( len == 0 )
+            return 0;
 
-        if ( len > 0 )
-        {
-            pending = true;
-            full = collect( buf, off, p_buf_sz );
-        }
-
-        return len - p_buf_sz[0];
-    }
-
-    public CompressedBlock compress()
-    {
-        finish();
-        CompressedBlock compressedBlock = new CompressedBlock( this );
-        reset();
-        return compressedBlock;
-
-    }
-
-    int nblock;
-
-    final byte[] block;
-
-    final int max_block_size;
-
-    int block_crc = -1;
-
-    private int rle_state;
-
-    private int rle_character;
-
-    final boolean[] inuse = new boolean[256];
-
-    private void reset()
-    {
-        Arrays.fill( inuse, false );
-        rle_state = 0;
-        block_crc = -1;
-        nblock = 0;
-        pending = false;
-    }
-
-    private boolean collect( byte[] inbuf, int off, int[] buf_sz )
-    {
         /* Cache some often used member variables for faster access. */
-        int avail = buf_sz[0];
-        int p = off;
-        int pLim = off + avail;
-        int q = nblock;
-        int qMax = max_block_size - 1;
-        int ch, last;
-        int run;
-        int save_crc;
-        int crc = block_crc;
+        final int maxOff = off + len;
+        int size = this.size;
+        int ch;
+        int crc = this.crc;
 
         /*
          * State can't be equal to MAX_RUN_LENGTH because the run would have already been dumped by the previous
          * function call.
          */
-        assert rle_state >= 0 && rle_state < MAX_RUN_LENGTH;
+        assert rleState >= 0 && rleState < MAX_RUN_LENGTH;
 
         main_loop: for ( ;; )
         {
             /* Finish any existing runs before starting a new one. */
-            if ( rle_state != 0 )
+            if ( rleState != 0 )
             {
-                ch = rle_character;
+                ch = rleCharacter;
 
                 finish_run: for ( ;; )
                 {
                     /* There is an unfinished run from the previous call, try to finish it. */
-                    if ( q >= qMax && ( q > qMax || ( rle_state == 3 && p < pLim && ( inbuf[p] & 0xFF ) == ch ) ) )
+                    if ( size >= maxSize - 1
+                        && ( size >= maxSize || ( rleState == 3 && off < maxOff && ( buf[off] & 0xFF ) == ch ) ) )
                     {
-                        rle_state = -1;
+                        rleState = -1;
                         break main_loop;
                     }
 
                     /* We have run out of input bytes before finishing the run. */
-                    if ( p == pLim )
+                    if ( off == maxOff )
                         break main_loop;
 
                     /* If the run is at least 4 characters long, treat it specifically. */
-                    if ( rle_state >= 4 )
+                    if ( rleState >= 4 )
                     {
                         /* Make sure we really have a long run. */
-                        assert ( rle_state >= 4 );
-                        assert ( q <= qMax );
+                        assert rleState >= 4;
+                        assert size < maxSize;
 
-                        while ( p < pLim )
+                        while ( off < maxOff )
                         {
                             /*
                              * Lookahead the next character. Terminate current run if lookahead character doesn't match.
                              */
-                            if ( ( inbuf[p] & 0xFF ) != ch )
+                            if ( ( buf[off] & 0xFF ) != ch )
                             {
-                                block[q++] = (byte) ( rle_state - 4 + CHARACTER_BIAS );
-                                inuse[rle_state - 4] = true;
+                                block[size++] = (byte) ( rleState - 4 + CHARACTER_BIAS );
+                                inuse[rleState - 4] = true;
                                 break finish_run;
                             }
 
@@ -179,17 +139,17 @@ public class UncompressedBlock
                              * Lookahead character turned out to be continuation of the run. Consume it and increase run
                              * length.
                              */
-                            p++;
+                            off++;
                             crc = ( crc << 8 ) ^ crc_table[( crc >>> 24 ) ^ ch];
-                            rle_state++;
+                            rleState++;
 
                             /*
                              * If the run has reached length of MAX_RUN_LENGTH, we have to terminate it prematurely
                              * (i.e. now).
                              */
-                            if ( rle_state == MAX_RUN_LENGTH )
+                            if ( rleState == MAX_RUN_LENGTH )
                             {
-                                block[q++] = (byte) ( MAX_RUN_LENGTH - 4 + CHARACTER_BIAS );
+                                block[size++] = (byte) ( MAX_RUN_LENGTH - 4 + CHARACTER_BIAS );
                                 inuse[MAX_RUN_LENGTH - 4] = true;
                                 break finish_run;
                             }
@@ -202,14 +162,14 @@ public class UncompressedBlock
                     /*
                      * Lookahead the next character. Terminate current run if lookahead character does not match.
                      */
-                    if ( ( inbuf[p] & 0xFF ) != ch )
+                    if ( ( buf[off] & 0xFF ) != ch )
                         break finish_run;
 
                     /* Append the character to the run. */
-                    p++;
+                    off++;
                     crc = ( crc << 8 ) ^ crc_table[( crc >>> 24 ) ^ ch];
-                    rle_state++;
-                    block[q++] = (byte) ( ch + CHARACTER_BIAS );
+                    rleState++;
+                    block[size++] = (byte) ( ch + CHARACTER_BIAS );
 
                     /* We haven't finished the run yet, so keep going. */
                 }
@@ -218,101 +178,102 @@ public class UncompressedBlock
             for ( ;; )
             {
                 /* === STATE 0 === */
-                if ( q > qMax )
+                if ( size >= maxSize )
                 {
-                    rle_state = -1;
+                    rleState = -1;
                     break main_loop;
                 }
-                if ( p == pLim )
+                if ( off == maxOff )
                 {
-                    rle_state = 0;
+                    rleState = 0;
                     break main_loop;
                 }
-                ch = inbuf[p++] & 0xFF;
+                ch = buf[off++] & 0xFF;
                 crc = ( crc << 8 ) ^ crc_table[( crc >>> 24 ) ^ ch];
 
                 state1: for ( ;; )
                 {
-                    for ( ;; )
+                    int last;
+
+                    do
                     {
                         /* === STATE 1 === */
                         inuse[ch] = true;
-                        block[q++] = (byte) ( ch + CHARACTER_BIAS );
-                        if ( q > qMax )
+                        block[size++] = (byte) ( ch + CHARACTER_BIAS );
+                        if ( size >= maxSize )
                         {
-                            rle_state = -1;
+                            rleState = -1;
                             break main_loop;
                         }
-                        if ( p == pLim )
+                        if ( off == maxOff )
                         {
-                            rle_state = 1;
-                            rle_character = ch;
+                            rleState = 1;
+                            rleCharacter = ch;
                             break main_loop;
                         }
                         last = ch;
-                        ch = inbuf[p++] & 0xFF;
+                        ch = buf[off++] & 0xFF;
                         crc = ( crc << 8 ) ^ crc_table[( crc >>> 24 ) ^ ch];
-                        if ( ch == last )
-                            break;
                     }
+                    while ( ch != last );
 
                     /* === STATE 2 === */
-                    block[q++] = (byte) ( ch + CHARACTER_BIAS );
-                    if ( q > qMax )
+                    block[size++] = (byte) ( ch + CHARACTER_BIAS );
+                    if ( size >= maxSize )
                     {
-                        rle_state = -1;
+                        rleState = -1;
                         break main_loop;
                     }
-                    if ( p == pLim )
+                    if ( off == maxOff )
                     {
-                        rle_state = 2;
-                        rle_character = ch;
+                        rleState = 2;
+                        rleCharacter = ch;
                         break main_loop;
                     }
-                    ch = inbuf[p++] & 0xFF;
+                    ch = buf[off++] & 0xFF;
                     crc = ( crc << 8 ) ^ crc_table[( crc >>> 24 ) ^ ch];
                     if ( ch != last )
                         continue;
 
                     /* === STATE 3 === */
-                    block[q++] = (byte) ( ch + CHARACTER_BIAS );
-                    if ( q >= qMax && ( q > qMax || ( p < pLim && ( inbuf[p] & 0xFF ) == last ) ) )
+                    block[size++] = (byte) ( ch + CHARACTER_BIAS );
+                    if ( size >= maxSize - 1 && ( size >= maxSize || ( off < maxOff && ( buf[off] & 0xFF ) == last ) ) )
                     {
-                        rle_state = -1;
+                        rleState = -1;
                         break main_loop;
                     }
-                    if ( p == pLim )
+                    if ( off == maxOff )
                     {
-                        rle_state = 3;
-                        rle_character = ch;
+                        rleState = 3;
+                        rleCharacter = ch;
                         break main_loop;
                     }
-                    ch = inbuf[p++] & 0xFF;
+                    ch = buf[off++] & 0xFF;
                     crc = ( crc << 8 ) ^ crc_table[( crc >>> 24 ) ^ ch];
                     if ( ch != last )
                         continue;
 
                     /* === STATE 4+ === */
-                    assert q < qMax;
-                    block[q++] = (byte) ( ch + CHARACTER_BIAS );
+                    assert size < maxSize - 1;
+                    block[size++] = (byte) ( ch + CHARACTER_BIAS );
 
                     /*
                      * While the run is shorter than MAX_RUN_LENGTH characters, keep trying to append more characters to
                      * it.
                      */
-                    for ( run = 4; run < MAX_RUN_LENGTH; run++ )
+                    for ( int run = 4; run < MAX_RUN_LENGTH; run++ )
                     {
                         /* Check for end of input buffer. */
-                        if ( p == pLim )
+                        if ( off == maxOff )
                         {
-                            rle_state = run;
-                            rle_character = ch;
+                            rleState = run;
+                            rleCharacter = ch;
                             break main_loop;
                         }
 
                         /* Fetch the next character. */
-                        ch = inbuf[p++] & 0xFF;
-                        save_crc = crc;
+                        ch = buf[off++] & 0xFF;
+                        int savedCrc = crc;
                         crc = ( crc << 8 ) ^ crc_table[( crc >>> 24 ) ^ ch];
 
                         /*
@@ -320,17 +281,17 @@ public class UncompressedBlock
                          */
                         if ( ch != last )
                         {
-                            block[q++] = (byte) ( run - 4 + CHARACTER_BIAS );
+                            block[size++] = (byte) ( run - 4 + CHARACTER_BIAS );
                             inuse[run - 4] = true;
-                            if ( q <= qMax )
+                            if ( size < maxSize )
                                 continue state1;
 
                             /*
                              * There is no space left to begin a new run. Unget the last character and finish.
                              */
-                            p--;
-                            crc = save_crc;
-                            rle_state = -1;
+                            off--;
+                            crc = savedCrc;
+                            rleState = -1;
                             break main_loop;
                         }
                     }
@@ -338,28 +299,39 @@ public class UncompressedBlock
                     /*
                      * The run has reached maximal length, so it must be ended prematurely.
                      */
-                    block[q++] = (byte) ( MAX_RUN_LENGTH - 4 + CHARACTER_BIAS );
+                    block[size++] = (byte) ( MAX_RUN_LENGTH - 4 + CHARACTER_BIAS );
                     inuse[MAX_RUN_LENGTH - 4] = true;
                     break;
                 }
             }
         }
 
-        nblock = q;
-        block_crc = crc;
-        buf_sz[0] -= p - off;
-        return rle_state < 0;
+        this.size = size;
+        this.crc = crc;
+        return len - ( maxOff - off );
     }
 
-    /* Finalize initial RLE. */
-    private void finish()
+    public CompressedBlock compress()
     {
-        if ( rle_state >= 4 )
+        if ( size < MIN_BLOCK_SIZE )
+            throw new IllegalStateException( "Cannot compress empty block" );
+
+        /* Finalize initial RLE. */
+        if ( rleState >= 4 )
         {
-            assert ( nblock < max_block_size );
-            block[nblock++] = (byte) ( rle_state - 4 + CHARACTER_BIAS );
-            inuse[rle_state - 4] = true;
+            assert ( size < maxSize );
+            block[size++] = (byte) ( rleState - 4 + CHARACTER_BIAS );
+            inuse[rleState - 4] = true;
         }
-        assert ( nblock > 0 );
+
+        CompressedBlock compressedBlock = new CompressedBlock( this );
+
+        /* Reset block to the initial state. */
+        Arrays.fill( inuse, false );
+        rleState = 0;
+        crc = -1;
+        size = 0;
+
+        return compressedBlock;
     }
 }

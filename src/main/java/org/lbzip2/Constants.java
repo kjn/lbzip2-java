@@ -150,6 +150,11 @@ class Constants
     static final int MAX_RUN_LENGTH = 4 + 255;
 
     /**
+     * Minimal size of a block.
+     */
+    static final int MIN_BLOCK_SIZE = 1;
+
+    /**
      * Maximal size of a block.
      */
     static final int MAX_BLOCK_SIZE = 900000;
