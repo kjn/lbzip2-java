@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory;
 /**
  * @author Mikolaj Izdebski
  */
-class Encoder
+final class Encoder
 {
     private final Logger logger = LoggerFactory.getLogger( Encoder.class );
 
@@ -60,11 +60,11 @@ class Encoder
 
     private final BWT bwt = new DivBWT();
 
-    int block_crc;
+    private int block_crc;
 
     private final boolean[] inuse = new boolean[256];
 
-    public Encoder( UncompressedBlock col, EntropyCoder ec )
+    private Encoder( UncompressedBlock col, EntropyCoder ec )
     {
         this.col = col;
         this.ec = ec;
@@ -152,7 +152,7 @@ class Encoder
         return mtfv_off;
     }
 
-    int encode()
+    private int encode()
     {
         int cost;
         int pk;
@@ -275,7 +275,7 @@ class Encoder
         this.k = k;
     }
 
-    void transmit( byte[] buf )
+    private void transmit( byte[] buf )
     {
         int t;
         int v;
@@ -387,5 +387,16 @@ class Encoder
             p[p_off++] = (byte) ( b << ( 56 - ( k -= 8 ) ) >> 56 );
         }
         assert ( p_off == out_expect_len );
+    }
+
+    static CompressedBlock encode( UncompressedBlock uncompressedBlock )
+    {
+        Encoder encoder = new Encoder( uncompressedBlock, new EntropyCoder( 10 ) );
+        int blockSize = uncompressedBlock.size;
+        int compressedSize = encoder.encode();
+        byte[] buffer = new byte[compressedSize];
+        int crc = encoder.block_crc;
+        encoder.transmit( buffer );
+        return new CompressedBlock( buffer, blockSize, crc );
     }
 }

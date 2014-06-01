@@ -324,7 +324,7 @@ public class UncompressedBlock
             inuse[rleState - 4] = true;
         }
 
-        CompressedBlock compressedBlock = new CompressedBlock( this );
+        CompressedBlock compressedBlock = Encoder.encode( this );
 
         /* Reset block to the initial state. */
         Arrays.fill( inuse, false );

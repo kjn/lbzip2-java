@@ -20,16 +20,16 @@ package org.lbzip2;
  */
 public class CompressedBlock
 {
-    final Encoder encoder;
+    final byte[] buffer;
 
     final int blockSize;
 
-    final int compressedSize;
+    final int crc;
 
-    CompressedBlock( UncompressedBlock uncompressedBlock )
+    CompressedBlock( byte[] buffer, int blockSize, int crc )
     {
-        encoder = new Encoder( uncompressedBlock, new EntropyCoder( 10 ) );
-        blockSize = uncompressedBlock.size;
-        compressedSize = encoder.encode();
+        this.buffer = buffer;
+        this.blockSize = blockSize;
+        this.crc = crc;
     }
 }
